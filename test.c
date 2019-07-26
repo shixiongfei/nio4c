@@ -73,6 +73,13 @@ int main(int argc, char* argv[]) {
     n = selector_select(selector, monitors, 4, 1234567);
 
     for (i = 0; i < n; ++i) {
+      if (monitor_exception(monitors[i])) {
+        nio_sockipstr(monitor_io(monitors[i]), &ipstr);
+        printf("%s:%d is error.\n", ipstr.addr, ipstr.port);
+
+        nio_shutdown(monitor_io(monitors[i]), SHUT_RDWR);
+      }
+
       if (monitor_readable(monitors[i])) {
         if (monitor_io(monitors[i]) == &server) {
           nio_accept(&server, &session, &sess_addr);
@@ -110,8 +117,9 @@ int main(int argc, char* argv[]) {
       }
 
       if (monitor_closed(monitors[i])) {
-        nio_destroysocket(monitor_io(monitors[i]));
+        niosocket_t *io = monitor_io(monitors[i]);
         monitor_destroy(monitors[i]);
+        nio_destroysocket(io);
       }
     }
   }

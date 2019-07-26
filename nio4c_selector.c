@@ -9,6 +9,7 @@
  *  https://github.com/shixiongfei/nio4c
  */
 
+#include <assert.h>
 #include "nio4c.h"
 #include "internal.h"
 
@@ -116,8 +117,10 @@ int selector_select(nioselector_t *selector, niomonitor_t **monitors, int count,
   for (i = 0; i < ready; ++i) {
     monitor = (niomonitor_t *)pevt[i].userdata;
 
-    if (pevt[i].error)
-      continue;
+    if (pevt[i].error) {
+      assert(monitor);
+      monitor->readiness |= NIO_IOERROR;
+    }
 
     if (pevt[i].readable) {
       if (pevt[i].fd == nio_sockfd(&selector->wakeup))

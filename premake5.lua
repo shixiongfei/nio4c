@@ -45,7 +45,7 @@ solution ( "nio4c" )
   configuration ( "gmake" )
     warnings  "Default" --"Extra"
     defines { "LINUX_OR_MACOSX" }
-    links { "iconv" }
+    links { }
 
   configuration { "gmake", "macosx" }
     defines { "__APPLE__", "__MACH__", "__MRC__", "macintosh" }

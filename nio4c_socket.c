@@ -23,6 +23,9 @@
 #endif
 
 #if defined(__linux__)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <net/ethernet.h>
 #include <net/if_arp.h>
 #endif

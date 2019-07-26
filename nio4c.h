@@ -192,6 +192,7 @@ int monitor_addinterest(niomonitor_t *monitor, int interest);
 int monitor_removeinterest(niomonitor_t *monitor, int interest);
 int monitor_readable(niomonitor_t *monitor);
 int monitor_writable(niomonitor_t *monitor);
+int monitor_exception(niomonitor_t *monitor);
 int monitor_closed(niomonitor_t *monitor);
 
 #ifdef __cplusplus

@@ -100,6 +100,8 @@ int niohtable_iter(niohtable_t *ht, niohtableiter_t *iter);
 int niohtable_next(niohtableiter_t *iter, niosocket_t **io,
   niomonitor_t **monitor);
 
+#define NIO_IOERROR 4
+
 struct nioselector_s {
   niopoll_t *selector;
   niohtable_t selectables;
