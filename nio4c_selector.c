@@ -161,3 +161,7 @@ int selector_close(nioselector_t *selector) {
 int selector_closed(nioselector_t *selector) {
   return selector->closed;
 }
+
+int selector_empty(nioselector_t *selector) {
+  return selector->selectables.used == 0;
+}

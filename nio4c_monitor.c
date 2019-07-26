@@ -100,10 +100,6 @@ int monitor_exception(niomonitor_t *monitor) {
   return NIO_IOERROR == (monitor->readiness & NIO_IOERROR);
 }
 
-int selector_empty(nioselector_t *selector) {
-  return selector->selectables.used == 0;
-}
-
 int monitor_closed(niomonitor_t *monitor) {
   return monitor->closed;
 }
