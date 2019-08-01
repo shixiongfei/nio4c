@@ -1,2 +1,3 @@
 # nio4c
-Network  I/O selector for C
+
+New I/O for C (nio4c) is a ported version of nio4r.
