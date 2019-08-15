@@ -27,6 +27,8 @@ int main(int argc, char* argv[]) {
 
   nio_initialize();
 
+  printf("nio4c version: %s\n", NIO_VERSION);
+
   n = nio_gethwaddr(hwaddrs, sizeof(hwaddrs) / sizeof(hwaddrs[0]));
 
   printf("hostname: %s\n", nio_gethostname());

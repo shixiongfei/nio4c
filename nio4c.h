@@ -58,6 +58,37 @@
 #define SHUT_RDWR SD_BOTH
 #endif
 
+#ifndef _WIN32
+#define NIO_EXPORT __attribute__((visibility("default")))
+#define NIO_IMPORT __attribute__((visibility("default")))
+#else
+#define NIO_EXPORT __declspec(dllexport)
+#define NIO_IMPORT __declspec(dllimport)
+#endif
+
+#if defined(NIO_STATIC)
+#define NIO_API extern
+#elif defined(NIO_BUILD_DLL)
+#define NIO_API NIO_EXPORT
+#else
+#define NIO_API NIO_IMPORT
+#endif
+
+#define NIO_QUOTEX(x) #x
+#define NIO_QUOTE(x) NIO_QUOTEX(x)
+
+#define NIO_MAJOR 0
+#define NIO_MINOR 1
+#define NIO_PATCH 0
+
+#define NIO_VERMAJOR NIO_QUOTE(NIO_MAJOR)
+#define NIO_VERMINOR NIO_QUOTE(NIO_MINOR)
+#define NIO_VERPATCH NIO_QUOTE(NIO_PATCH)
+
+#define NIO_VERNUM ((NIO_MAJOR * 100) + NIO_MINOR)
+#define NIO_VERFULL ((NIO_VERNUM * 100) + NIO_PATCH)
+#define NIO_VERSION (NIO_VERMAJOR "." NIO_VERMINOR "." NIO_VERPATCH)
+
 #define NIO_MTUMAXSIZE 1500
 #define NIO_MTUMINSIZE 400
 
@@ -90,35 +121,35 @@ typedef struct niohwaddr_s {
   unsigned char hwaddr[NIO_HWADDRLEN];
 } niohwaddr_t;
 
-void nio_setalloc(void *(*alloc)(size_t), void (*release)(void *));
+NIO_API void nio_setalloc(void *(*alloc)(size_t), void (*release)(void *));
 
-void nio_initialize(void);
-void nio_finalize(void);
+NIO_API void nio_initialize(void);
+NIO_API void nio_finalize(void);
 
-unsigned short nio_checksum(const void *buffer, int len);
-const char *nio_gethostname(void);
-int nio_gethwaddr(niohwaddr_t *hwaddr, int count);
+NIO_API unsigned short nio_checksum(const void *buffer, int len);
+NIO_API const char *nio_gethostname(void);
+NIO_API int nio_gethwaddr(niohwaddr_t *hwaddr, int count);
 
-int nio_resolvehost(niosockaddr_t *addr_list, int count, int af,
+NIO_API int nio_resolvehost(niosockaddr_t *addr_list, int count, int af,
   const char *hostname, unsigned short port);
-int nio_hostaddr(niosockaddr_t *addr, const char *hostname,
+NIO_API int nio_hostaddr(niosockaddr_t *addr, const char *hostname,
   unsigned short port);
-int nio_ipstr(nioipstr_t *ipstr, const niosockaddr_t *addr);
+NIO_API int nio_ipstr(nioipstr_t *ipstr, const niosockaddr_t *addr);
 
-int nio_isnat(const niosockaddr_t *addr);
-int nio_ipmasklen(const niosockaddr_t *addr);
+NIO_API int nio_isnat(const niosockaddr_t *addr);
+NIO_API int nio_ipmasklen(const niosockaddr_t *addr);
 
-int nio_inprogress(void);
+NIO_API int nio_inprogress(void);
 
-int nio_createtcp(niosocket_t *s, int af);
-int nio_createtcp4(niosocket_t *s);
-int nio_createtcp6(niosocket_t *s);
+NIO_API int nio_createtcp(niosocket_t *s, int af);
+NIO_API int nio_createtcp4(niosocket_t *s);
+NIO_API int nio_createtcp6(niosocket_t *s);
 
-int nio_createudp(niosocket_t *s, int af);
-int nio_createudp4(niosocket_t *s);
-int nio_createudp6(niosocket_t *s);
+NIO_API int nio_createudp(niosocket_t *s, int af);
+NIO_API int nio_createudp4(niosocket_t *s);
+NIO_API int nio_createudp6(niosocket_t *s);
 
-void nio_destroysocket(niosocket_t *s);
+NIO_API void nio_destroysocket(niosocket_t *s);
 
 #define nio_sockfd(s) ((s)->sockfd)
 
@@ -128,72 +159,77 @@ void nio_destroysocket(niosocket_t *s);
 #define nio_ioctlsocket ioctlsocket
 #endif
 
-int nio_bind(niosocket_t *s, const niosockaddr_t *addr);
-int nio_listen(niosocket_t *s, int backlog);
-int nio_connect(niosocket_t *s, const niosockaddr_t *addr);
-int nio_accept(niosocket_t *s, niosocket_t *client, niosockaddr_t *addr);
-int nio_shutdown(niosocket_t *s, int how);
-int nio_peeraddr(niosocket_t *s, niosockaddr_t *addr);
-int nio_peeripstr(niosocket_t *s, nioipstr_t *addr);
-int nio_sockaddr(niosocket_t *s, niosockaddr_t *addr);
-int nio_sockipstr(niosocket_t *s, nioipstr_t *addr);
+NIO_API int nio_bind(niosocket_t *s, const niosockaddr_t *addr);
+NIO_API int nio_listen(niosocket_t *s, int backlog);
+NIO_API int nio_connect(niosocket_t *s, const niosockaddr_t *addr);
+NIO_API int nio_accept(niosocket_t *s, niosocket_t *client,
+  niosockaddr_t *addr);
+NIO_API int nio_shutdown(niosocket_t *s, int how);
+NIO_API int nio_peeraddr(niosocket_t *s, niosockaddr_t *addr);
+NIO_API int nio_peeripstr(niosocket_t *s, nioipstr_t *addr);
+NIO_API int nio_sockaddr(niosocket_t *s, niosockaddr_t *addr);
+NIO_API int nio_sockipstr(niosocket_t *s, nioipstr_t *addr);
 
-int nio_socketnonblock(niosocket_t *s, int on);
-int nio_reuseaddr(niosocket_t *s, int on);
-int nio_tcpnodelay(niosocket_t *s, int on);
-int nio_tcpkeepalive(niosocket_t *s, int on);
-int nio_tcpkeepvalues(niosocket_t *s, int idle, int interval, int count);
-int nio_udpbroadcast(niosocket_t *s, int on);
+NIO_API int nio_socketnonblock(niosocket_t *s, int on);
+NIO_API int nio_reuseaddr(niosocket_t *s, int on);
+NIO_API int nio_tcpnodelay(niosocket_t *s, int on);
+NIO_API int nio_tcpkeepalive(niosocket_t *s, int on);
+NIO_API int nio_tcpkeepvalues(niosocket_t *s, int idle, 
+  int interval, int count);
+NIO_API int nio_udpbroadcast(niosocket_t *s, int on);
 
-int nio_socketreadable(niosocket_t *s, unsigned int timedout);
-int nio_socketwritable(niosocket_t *s, unsigned int timedout);
+NIO_API int nio_socketreadable(niosocket_t *s, unsigned int timedout);
+NIO_API int nio_socketwritable(niosocket_t *s, unsigned int timedout);
 
-int nio_send(niosocket_t *s, const void *buffer, int len);
-int nio_recv(niosocket_t *s, void *buffer, int len);
-int nio_sendto(niosocket_t *s, const niosockaddr_t *addr,
+NIO_API int nio_send(niosocket_t *s, const void *buffer, int len);
+NIO_API int nio_recv(niosocket_t *s, void *buffer, int len);
+NIO_API int nio_sendto(niosocket_t *s, const niosockaddr_t *addr,
   const void *buffer, int len);
-int nio_recvfrom(niosocket_t *s, niosockaddr_t *addr, void *buffer, int len);
-int nio_sendall(niosocket_t *s, const void *buffer, int len);
-int nio_recvall(niosocket_t *s, void *buffer, int len);
+NIO_API int nio_recvfrom(niosocket_t *s, niosockaddr_t *addr,
+  void *buffer, int len);
+NIO_API int nio_sendall(niosocket_t *s, const void *buffer, int len);
+NIO_API int nio_recvall(niosocket_t *s, void *buffer, int len);
 
 /* multiaddr: 224.0.0.0 ~ 239.255.255.255, FF00::/8 */
-int nio_addmembership(niosocket_t *s, const niosockaddr_t *multiaddr);
-int nio_dropmembership(niosocket_t *s, const niosockaddr_t *multiaddr);
-int nio_multicastloop(niosocket_t *s, const niosockaddr_t *multiaddr, int on);
+NIO_API int nio_addmembership(niosocket_t *s, const niosockaddr_t *multiaddr);
+NIO_API int nio_dropmembership(niosocket_t *s, const niosockaddr_t *multiaddr);
+NIO_API int nio_multicastloop(niosocket_t *s, const niosockaddr_t *multiaddr,
+  int on);
 
-int nio_pipe(niosocket_t socks[2]);
-int nio_popen(niosocket_t *s, const char *cmdline);
+NIO_API int nio_pipe(niosocket_t socks[2]);
+NIO_API int nio_popen(niosocket_t *s, const char *cmdline);
 
 typedef struct nioselector_s nioselector_t;
 typedef struct niomonitor_s niomonitor_t;
 
-nioselector_t *nio_selector(void);
+NIO_API nioselector_t *nio_selector(void);
 
-void selector_destroy(nioselector_t *selector);
-const char *selector_backend(nioselector_t *selector);
-niomonitor_t *selector_register(nioselector_t *selector, niosocket_t *io,
-  int interest, void *ud);
-niomonitor_t *selector_deregister(nioselector_t *selector, niosocket_t *io);
-int selector_select(nioselector_t *selector, niomonitor_t **monitors, int count,
-  unsigned int millisec);
-int selector_wakeup(nioselector_t *selector);
-int selector_close(nioselector_t *selector);
-int selector_registered(nioselector_t *selector, niosocket_t *io);
-int selector_closed(nioselector_t *selector);
-int selector_empty(nioselector_t *selector);
+NIO_API void selector_destroy(nioselector_t *selector);
+NIO_API const char *selector_backend(nioselector_t *selector);
+NIO_API niomonitor_t *selector_register(nioselector_t *selector, 
+  niosocket_t *io, int interest, void *ud);
+NIO_API niomonitor_t *selector_deregister(nioselector_t *selector,
+  niosocket_t *io);
+NIO_API int selector_select(nioselector_t *selector, niomonitor_t **monitors, 
+  int count, unsigned int millisec);
+NIO_API int selector_wakeup(nioselector_t *selector);
+NIO_API int selector_close(nioselector_t *selector);
+NIO_API int selector_registered(nioselector_t *selector, niosocket_t *io);
+NIO_API int selector_closed(nioselector_t *selector);
+NIO_API int selector_empty(nioselector_t *selector);
 
-void monitor_destroy(niomonitor_t *monitor);
-void *monitor_userdata(niomonitor_t *monitor);
-niosocket_t *monitor_io(niomonitor_t *monitor);
-int monitor_close(niomonitor_t *monitor, int deregister);
-int monitor_getinterests(niomonitor_t *monitor);
-int monitor_setinterests(niomonitor_t *monitor, int interests);
-int monitor_addinterest(niomonitor_t *monitor, int interest);
-int monitor_removeinterest(niomonitor_t *monitor, int interest);
-int monitor_readable(niomonitor_t *monitor);
-int monitor_writable(niomonitor_t *monitor);
-int monitor_exception(niomonitor_t *monitor);
-int monitor_closed(niomonitor_t *monitor);
+NIO_API void monitor_destroy(niomonitor_t *monitor);
+NIO_API void *monitor_userdata(niomonitor_t *monitor);
+NIO_API niosocket_t *monitor_io(niomonitor_t *monitor);
+NIO_API int monitor_close(niomonitor_t *monitor, int deregister);
+NIO_API int monitor_getinterests(niomonitor_t *monitor);
+NIO_API int monitor_setinterests(niomonitor_t *monitor, int interests);
+NIO_API int monitor_addinterest(niomonitor_t *monitor, int interest);
+NIO_API int monitor_removeinterest(niomonitor_t *monitor, int interest);
+NIO_API int monitor_readable(niomonitor_t *monitor);
+NIO_API int monitor_writable(niomonitor_t *monitor);
+NIO_API int monitor_exception(niomonitor_t *monitor);
+NIO_API int monitor_closed(niomonitor_t *monitor);
 
 #ifdef __cplusplus
 };
