@@ -11,6 +11,9 @@ solution ( "nio4c" )
     os.remove("nio4c.vcxproj.filters")
     os.remove("nio4c.vcxproj.user")
     os.remove("nio4c.make")
+    os.remove("test.vcxproj")
+    os.remove("test.vcxproj.filters")
+    os.remove("test.vcxproj.user")
     os.remove("test.make")
     os.remove("Makefile")
     return
@@ -22,7 +25,7 @@ solution ( "nio4c" )
   language ( "C" )
   targetname ("nio4c")
   files { "./*.h", "./*.c" }
-  defines { "_UNICODE" }
+  defines { "_UNICODE", "NIO_BUILD_DLL" }
   staticruntime "On"
 
   configuration ( "Release" )
