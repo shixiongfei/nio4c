@@ -1,3 +1,3 @@
 # nio4c
 
-New I/O for C (nio4c) is a ported version of nio4r.
+Cross-platform asynchronous I/O primitives for scalable network clients and servers.
