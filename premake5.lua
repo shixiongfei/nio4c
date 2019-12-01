@@ -25,6 +25,7 @@ solution ( "nio4c" )
   language ( "C" )
   targetname ("nio4c")
   files { "./*.h", "./*.c" }
+  excludes { "./test.c" }
   defines { "_UNICODE", "NIO_BUILD_DLL" }
   staticruntime "On"
 
