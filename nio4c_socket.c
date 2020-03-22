@@ -35,7 +35,9 @@
 #include <mstcpip.h>
 #include <process.h>
 
+#ifdef _MSC_VER
 static const struct in6_addr in6addr_any = { {{0}} };
+#endif
 
 #define socklen_t int
 #define socket_errno() WSAGetLastError()
