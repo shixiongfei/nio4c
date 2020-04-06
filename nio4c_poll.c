@@ -1,7 +1,7 @@
 /*
  *  nio4c_poll.c
  *
- *  copyright (c) 2019 Xiongfei Shi
+ *  copyright (c) 2019, 2020 Xiongfei Shi
  *
  *  author: Xiongfei Shi <jenson.shixf(a)gmail.com>
  *  license: Apache-2.0
@@ -9,8 +9,7 @@
  *  https://github.com/shixiongfei/nio4c
  */
 
-#include "nio4c.h"
-#include "internal.h"
+#include "nio4c_internal.h"
 
 #if defined(__linux__)
 #include <sys/epoll.h>
@@ -31,7 +30,8 @@ niopoll_t *niopoll_create(void) {
 
   if (epfd < 0) {
     epfd = epoll_create(100000);
-    if (epfd < 0) return NULL;
+    if (epfd < 0)
+      return NULL;
   }
 
 #ifdef FD_CLOEXEC
@@ -50,9 +50,7 @@ void niopoll_destroy(niopoll_t *p) {
   nio_free(p);
 }
 
-int niopoll_backend(niopoll_t *p) {
-  return p->backend;
-}
+int niopoll_backend(niopoll_t *p) { return p->backend; }
 
 int niopoll_register(niopoll_t *p, int fd, void *userdata) {
   struct epoll_event ev;
@@ -68,7 +66,7 @@ int niopoll_deregister(niopoll_t *p, int fd) {
 }
 
 int niopoll_ioevent(niopoll_t *p, int fd, int readable, int writeable,
-  void *userdata) {
+                    void *userdata) {
   struct epoll_event ev;
 
   ev.events = (readable ? EPOLLIN : 0) | (writeable ? EPOLLOUT : 0);
@@ -111,7 +109,8 @@ niopoll_t *niopoll_create(void) {
   int kqfd;
 
   kqfd = kqueue();
-  if (kqfd < 0) return NULL;
+  if (kqfd < 0)
+    return NULL;
 
   p = (niopoll_t *)nio_malloc(sizeof(niopoll_t));
   p->backend = NIO_KQUEUE;
@@ -125,9 +124,7 @@ void niopoll_destroy(niopoll_t *p) {
   nio_free(p);
 }
 
-int niopoll_backend(niopoll_t *p) {
-  return p->backend;
-}
+int niopoll_backend(niopoll_t *p) { return p->backend; }
 
 int niopoll_register(niopoll_t *p, int fd, void *userdata) {
   struct kevent ke;
@@ -163,15 +160,15 @@ int niopoll_deregister(niopoll_t *p, int fd) {
 }
 
 int niopoll_ioevent(niopoll_t *p, int fd, int readable, int writeable,
-  void *userdata) {
+                    void *userdata) {
   struct kevent ke;
 
   EV_SET(&ke, fd, EVFILT_READ, readable ? EV_ENABLE : EV_DISABLE, 0, 0,
-    userdata);
+         userdata);
   kevent(p->kqfd, &ke, 1, NULL, 0, NULL);
 
   EV_SET(&ke, fd, EVFILT_WRITE, writeable ? EV_ENABLE : EV_DISABLE, 0, 0,
-    userdata);
+         userdata);
   kevent(p->kqfd, &ke, 1, NULL, 0, NULL);
 
   return 0;
@@ -261,21 +258,19 @@ niopoll_t *niopoll_create(void) {
   return p;
 }
 
-void niopoll_destroy(niopoll_t *p) {
-  nio_free(p);
-}
+void niopoll_destroy(niopoll_t *p) { nio_free(p); }
 
-int niopoll_backend(niopoll_t *p) {
-  return p->backend;
-}
+int niopoll_backend(niopoll_t *p) { return p->backend; }
 
 int niopoll_register(niopoll_t *p, int fd, void *userdata) {
   int i;
 
-  if (p->nfds >= FD_SETSIZE) return -1;
+  if (p->nfds >= FD_SETSIZE)
+    return -1;
 
   for (i = 0; i < p->nfds; ++i)
-    if (p->sfds[i].fd == fd) return -1;
+    if (p->sfds[i].fd == fd)
+      return -1;
 
   i = p->nfds;
 
@@ -291,7 +286,8 @@ int niopoll_register(niopoll_t *p, int fd, void *userdata) {
 int niopoll_deregister(niopoll_t *p, int fd) {
   int i, last;
 
-  if (p->nfds <= 0) return -1;
+  if (p->nfds <= 0)
+    return -1;
 
   last = p->nfds - 1;
 
@@ -325,12 +321,13 @@ int niopoll_deregister(niopoll_t *p, int fd) {
 }
 
 int niopoll_ioevent(niopoll_t *p, int fd, int readable, int writeable,
-  void *userdata) {
+                    void *userdata) {
   int i;
 
   for (i = 0; i < p->nfds; ++i) {
     if (p->sfds[i].fd == fd) {
-      p->sfds[i].events = (readable ? FD_POLLIN : 0) | (writeable ? FD_POLLOUT : 0);
+      p->sfds[i].events =
+          (readable ? FD_POLLIN : 0) | (writeable ? FD_POLLOUT : 0);
       p->sfds[i].ud = userdata;
       return 0;
     }
@@ -339,7 +336,8 @@ int niopoll_ioevent(niopoll_t *p, int fd, int readable, int writeable,
 }
 
 static struct timeval *map_timeout(int millisec, struct timeval *timeout) {
-  if (millisec < 0) return NULL;
+  if (millisec < 0)
+    return NULL;
 
   if (0 == millisec) {
     timeout->tv_sec = 0;

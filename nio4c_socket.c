@@ -1,7 +1,7 @@
 /*
  *  nio4c_socket.c
  *
- *  copyright (c) 2019 Xiongfei Shi
+ *  copyright (c) 2019, 2020 Xiongfei Shi
  *
  *  author: Xiongfei Shi <jenson.shixf(a)gmail.com>
  *  license: Apache-2.0
@@ -9,8 +9,7 @@
  *  https://github.com/shixiongfei/nio4c
  */
 
-#include "nio4c.h"
-#include "internal.h"
+#include "nio4c_internal.h"
 
 #if defined(__APPLE__)
 #include <CoreFoundation/CoreFoundation.h>
@@ -23,20 +22,20 @@
 #endif
 
 #if defined(__linux__)
+#include <net/ethernet.h>
+#include <net/if_arp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <net/ethernet.h>
-#include <net/if_arp.h>
 #endif
 
 #ifdef _WIN32
-#include <stdio.h>
 #include <mstcpip.h>
 #include <process.h>
+#include <stdio.h>
 
 #ifdef _MSC_VER
-static const struct in6_addr in6addr_any = { {{0}} };
+static const struct in6_addr in6addr_any = {{{0}}};
 #endif
 
 #define socklen_t int
@@ -73,7 +72,7 @@ static const struct in6_addr in6addr_any = { {{0}} };
 #endif
 
 const char *nio_gethostname(void) {
-  static char buffer[MAXHOSTNAMELEN] = { 0 };
+  static char buffer[MAXHOSTNAMELEN] = {0};
 
   if (!buffer[0]) {
     if (0 != gethostname(buffer, sizeof(buffer))) {
@@ -85,7 +84,7 @@ const char *nio_gethostname(void) {
 
 #if defined(__APPLE__)
 static kern_return_t find_ethernet_interfaces(io_iterator_t *matchingServices,
-  int primary_only) {
+                                              int primary_only) {
   CFMutableDictionaryRef matchingDict;
 
   matchingDict = IOServiceMatching(kIOEthernetInterfaceClass);
@@ -94,20 +93,20 @@ static kern_return_t find_ethernet_interfaces(io_iterator_t *matchingServices,
     CFMutableDictionaryRef propertyMatchDict;
 
     propertyMatchDict = CFDictionaryCreateMutable(
-      kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks,
-      &kCFTypeDictionaryValueCallBacks);
+        kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks,
+        &kCFTypeDictionaryValueCallBacks);
 
     if (NULL != propertyMatchDict) {
       CFDictionarySetValue(propertyMatchDict, CFSTR(kIOPrimaryInterface),
-        kCFBooleanTrue);
+                           kCFBooleanTrue);
       CFDictionarySetValue(matchingDict, CFSTR(kIOPropertyMatchKey),
-        propertyMatchDict);
+                           propertyMatchDict);
       CFRelease(propertyMatchDict);
     }
   }
 
   return IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDict,
-    matchingServices);
+                                      matchingServices);
 }
 
 int nio_gethwaddr(niohwaddr_t *hwaddr, int count) {
@@ -124,15 +123,15 @@ int nio_gethwaddr(niohwaddr_t *hwaddr, int count) {
     CFTypeRef MACAddressAsCFData;
 
     if (KERN_SUCCESS != IORegistryEntryGetParentEntry(
-      intfService, kIOServicePlane, &controllerService))
+                            intfService, kIOServicePlane, &controllerService))
       continue;
 
     MACAddressAsCFData = IORegistryEntryCreateCFProperty(
-      controllerService, CFSTR(kIOMACAddress), kCFAllocatorDefault, 0);
+        controllerService, CFSTR(kIOMACAddress), kCFAllocatorDefault, 0);
 
     if (MACAddressAsCFData) {
       CFDataGetBytes(MACAddressAsCFData, CFRangeMake(0, kIOEthernetAddressSize),
-        hwaddr[num++].hwaddr);
+                     hwaddr[num++].hwaddr);
       CFRelease(MACAddressAsCFData);
     }
 
@@ -145,23 +144,23 @@ int nio_gethwaddr(niohwaddr_t *hwaddr, int count) {
 }
 #elif defined(_WIN32)
 static int is_physical_adapter(const char *name) {
-  char buffer[256] = { 0 };
+  char buffer[256] = {0};
   DWORD dwType = REG_SZ, dwDataLen;
   HKEY hNetKey = NULL;
 
   sprintf(buffer,
-    "SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-"
-    "BFC1-08002BE10318}\\%s\\Connection",
-    name);
+          "SYSTEM\\CurrentControlSet\\Control\\Network\\{4D36E972-E325-11CE-"
+          "BFC1-08002BE10318}\\%s\\Connection",
+          name);
 
   if (ERROR_SUCCESS !=
-    RegOpenKeyExA(HKEY_LOCAL_MACHINE, buffer, 0, KEY_READ, &hNetKey))
+      RegOpenKeyExA(HKEY_LOCAL_MACHINE, buffer, 0, KEY_READ, &hNetKey))
     return 0;
 
   dwDataLen = sizeof(buffer);
 
   if (ERROR_SUCCESS == RegQueryValueExA(hNetKey, "MediaSubType", 0, &dwType,
-    (LPBYTE)buffer, &dwDataLen)) {
+                                        (LPBYTE)buffer, &dwDataLen)) {
     DWORD dwMediaSubType = *(DWORD *)buffer;
 
     /* 0x01 local network, 0x02 wifi network. */
@@ -174,7 +173,7 @@ static int is_physical_adapter(const char *name) {
   dwDataLen = sizeof(buffer);
 
   if (ERROR_SUCCESS != RegQueryValueExA(hNetKey, "PnpInstanceID", 0, &dwType,
-    (LPBYTE)buffer, &dwDataLen)) {
+                                        (LPBYTE)buffer, &dwDataLen)) {
     RegCloseKey(hNetKey);
     return 0;
   }
@@ -188,22 +187,22 @@ int nio_gethwaddr(niohwaddr_t *hwaddr, int count) {
   IP_ADAPTER_ADDRESSES *pAdapterAddr = NULL;
   ULONG ulOutBufLen = 0;
   ULONG ulFlags = GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST |
-    GAA_FLAG_SKIP_DNS_SERVER;
+                  GAA_FLAG_SKIP_DNS_SERVER;
   int num = 0;
 
   if (ERROR_BUFFER_OVERFLOW == GetAdaptersAddresses(AF_UNSPEC, ulFlags, NULL,
-    pAdapterAddr,
-    &ulOutBufLen)) {
+                                                    pAdapterAddr,
+                                                    &ulOutBufLen)) {
     pAdapterAddr = (IP_ADAPTER_ADDRESSES *)nio_malloc(ulOutBufLen);
     if (!pAdapterAddr)
       return -1;
   }
   if (NO_ERROR == GetAdaptersAddresses(AF_UNSPEC, ulFlags, NULL, pAdapterAddr,
-    &ulOutBufLen)) {
+                                       &ulOutBufLen)) {
     IP_ADAPTER_ADDRESSES *pAdapter;
 
     for (pAdapter = pAdapterAddr; (NULL != pAdapter) && (num < count);
-      pAdapter = pAdapter->Next) {
+         pAdapter = pAdapter->Next) {
       MIB_IFROW mib;
 
       memset(&mib, 0, sizeof(MIB_IFROW));
@@ -219,10 +218,10 @@ int nio_gethwaddr(niohwaddr_t *hwaddr, int count) {
         continue;
 
       if ((IF_TYPE_ETHERNET_CSMACD == pAdapter->IfType) ||
-        (IF_TYPE_IEEE80211 == pAdapter->IfType))
+          (IF_TYPE_IEEE80211 == pAdapter->IfType))
         if (is_physical_adapter(pAdapter->AdapterName))
           memcpy(hwaddr[num++].hwaddr, pAdapter->PhysicalAddress,
-            pAdapter->PhysicalAddressLength);
+                 pAdapter->PhysicalAddressLength);
     }
   }
   if (pAdapterAddr)
@@ -249,7 +248,7 @@ int nio_gethwaddr(niohwaddr_t *hwaddr, int count) {
       close(fd);
 
       if ((ARPHRD_ETHER == ifr.ifr_hwaddr.sa_family) ||
-        (ARPHRD_IEEE80211 == ifr.ifr_hwaddr.sa_family)) {
+          (ARPHRD_IEEE80211 == ifr.ifr_hwaddr.sa_family)) {
         int hwlen = ETHER_ADDR_LEN;
         memcpy(hwaddr[num++].hwaddr, ifr.ifr_hwaddr.sa_data, hwlen);
       }
@@ -262,7 +261,7 @@ int nio_gethwaddr(niohwaddr_t *hwaddr, int count) {
       close(fd);
 
       if ((IFM_ETHER == IFM_TYPE(ifmed.ifm_active)) ||
-        (IFM_IEEE80211 == IFM_TYPE(ifmed.ifm_active))) {
+          (IFM_IEEE80211 == IFM_TYPE(ifmed.ifm_active))) {
         struct sockaddr_dl *sdl = (struct sockaddr_dl *)ifa->ifa_addr;
 
         if (S_HWADDR_LEN == sdl->sdl_alen)
@@ -279,14 +278,14 @@ int nio_gethwaddr(niohwaddr_t *hwaddr, int count) {
 #endif
 
 int nio_resolvehost(niosockaddr_t *addr_list, int count, int af,
-  const char *hostname, unsigned short port) {
+                    const char *hostname, unsigned short port) {
   int retval = 0;
 
   if (hostname) {
     /* IP Address Resolve Host */
     struct addrinfo hints;
     struct addrinfo *servinfo = NULL;
-    char port_str[8] = { 0 };
+    char port_str[8] = {0};
 
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_UNSPEC;
@@ -299,7 +298,7 @@ int nio_resolvehost(niosockaddr_t *addr_list, int count, int af,
       struct addrinfo *aip;
 
       for (aip = servinfo; (NULL != aip) && (retval < count);
-        aip = aip->ai_next) {
+           aip = aip->ai_next) {
         if ((AF_INET == af) && (AF_INET == aip->ai_family)) {
           struct sockaddr_in *ipv4 = (struct sockaddr_in *)aip->ai_addr;
           ipv4->sin_port = htons(port);
@@ -314,8 +313,7 @@ int nio_resolvehost(niosockaddr_t *addr_list, int count, int af,
 
       freeaddrinfo(servinfo);
     }
-  }
-  else {
+  } else {
     if (AF_INET == af) {
       /* IP Address Any IPv4 */
       struct sockaddr_in addr;
@@ -346,7 +344,7 @@ int nio_resolvehost(niosockaddr_t *addr_list, int count, int af,
 }
 
 int nio_hostaddr(niosockaddr_t *addr, const char *hostname,
-  unsigned short port) {
+                 unsigned short port) {
   if (nio_resolvehost(addr, 1, AF_INET, hostname, port) > 0)
     return 0;
   if (nio_resolvehost(addr, 1, AF_INET6, hostname, port) > 0)
@@ -356,13 +354,13 @@ int nio_hostaddr(niosockaddr_t *addr, const char *hostname,
 
 /* addr is in_addr or in6_addr */
 static const char *nio_inetntop(int af, const void *addr, char *strbuf,
-  int strbuf_size) {
+                                int strbuf_size) {
 #ifndef _WIN32
   return inet_ntop(af, addr, strbuf, strbuf_size);
 #else
   struct sockaddr_storage ss;
   unsigned long s = strbuf_size;
-  wchar_t wch_addr[INET6_ADDRSTRLEN + 1] = { 0 };
+  wchar_t wch_addr[INET6_ADDRSTRLEN + 1] = {0};
 
   ZeroMemory(&ss, sizeof(ss));
   ss.ss_family = af;
@@ -380,7 +378,7 @@ static const char *nio_inetntop(int af, const void *addr, char *strbuf,
 
   /* cannot direclty use &size because of strict aliasing rules */
   if (0 != WSAAddressToStringW((struct sockaddr *)&ss, sizeof(ss), NULL,
-    wch_addr, &s))
+                               wch_addr, &s))
     return NULL;
 
   WideCharToMultiByte(CP_UTF8, 0, wch_addr, -1, strbuf, s, NULL, NULL);
@@ -426,14 +424,12 @@ int nio_ipstr(nioipstr_t *ipstr, const niosockaddr_t *addr) {
 
     nio_inetntop(AF_INET, &ss->sin_addr, ipstr->addr, sizeof(ipstr->addr));
     ipstr->port = ntohs(ss->sin_port);
-  }
-  else if (AF_INET6 == addr->saddr.ss_family) {
+  } else if (AF_INET6 == addr->saddr.ss_family) {
     struct sockaddr_in6 *ss = (struct sockaddr_in6 *)(&addr->saddr);
 
     nio_inetntop(AF_INET6, &ss->sin6_addr, ipstr->addr, sizeof(ipstr->addr));
     ipstr->port = ntohs(ss->sin6_port);
-  }
-  else
+  } else
     return -1;
   return 0;
 }
@@ -504,8 +500,8 @@ static int ipv6_masklen(struct sockaddr_in6 *s) {
 
 int nio_ipmasklen(const niosockaddr_t *addr) {
   return (AF_INET == addr->saddr.ss_family)
-    ? ipv4_masklen((struct sockaddr_in *)(&addr->saddr))
-    : ipv6_masklen((struct sockaddr_in6 *)(&addr->saddr));
+             ? ipv4_masklen((struct sockaddr_in *)(&addr->saddr))
+             : ipv6_masklen((struct sockaddr_in6 *)(&addr->saddr));
 }
 
 int nio_inprogress(void) {
@@ -514,7 +510,8 @@ int nio_inprogress(void) {
 }
 
 static int nio_createsocket(niosocket_t *s, int af, int type, int protocol) {
-  if (!s) return -1;
+  if (!s)
+    return -1;
 
 #ifndef _WIN32
   s->sockfd = socket(af, type, protocol);
@@ -569,13 +566,15 @@ void nio_destroysocket(niosocket_t *s) {
 }
 
 #define sockaddr_len(a)                                                        \
-  ((NULL == (a)) ? 0                                                           \
-  : (AF_INET == (a)->ss_family) ? sizeof(struct sockaddr_in)                   \
-  : (AF_INET6 == (a)->ss_family) ? sizeof(struct sockaddr_in6) : 0)
+  ((NULL == (a))                                                               \
+       ? 0                                                                     \
+       : (AF_INET == (a)->ss_family)                                           \
+             ? sizeof(struct sockaddr_in)                                      \
+             : (AF_INET6 == (a)->ss_family) ? sizeof(struct sockaddr_in6) : 0)
 
 int nio_bind(niosocket_t *s, const niosockaddr_t *addr) {
   return bind(s->sockfd, (struct sockaddr *)(&addr->saddr),
-    sockaddr_len(&addr->saddr));
+              sockaddr_len(&addr->saddr));
 }
 
 int nio_listen(niosocket_t *s, int backlog) {
@@ -585,10 +584,10 @@ int nio_listen(niosocket_t *s, int backlog) {
 int nio_connect(niosocket_t *s, const niosockaddr_t *addr) {
 #ifndef _WIN32
   return connect(s->sockfd, (struct sockaddr *)(&addr->saddr),
-    sockaddr_len(&addr->saddr));
+                 sockaddr_len(&addr->saddr));
 #else
   return WSAConnect(s->sockfd, (struct sockaddr *)(&addr->saddr),
-    sockaddr_len(&addr->saddr), NULL, NULL, NULL, NULL);
+                    sockaddr_len(&addr->saddr), NULL, NULL, NULL, NULL);
 #endif
 }
 
@@ -600,17 +599,16 @@ int nio_accept(niosocket_t *s, niosocket_t *client, niosockaddr_t *addr) {
   client->sockfd = accept(s->sockfd, (struct sockaddr *)&c_addr, &ca_len);
 #else
   client->sockfd =
-    (int)WSAAccept(s->sockfd, (struct sockaddr *)&c_addr, &ca_len, NULL, 0);
+      (int)WSAAccept(s->sockfd, (struct sockaddr *)&c_addr, &ca_len, NULL, 0);
 #endif
 
-  if (addr) memcpy(&addr->saddr, &c_addr, sizeof(c_addr));
+  if (addr)
+    memcpy(&addr->saddr, &c_addr, sizeof(c_addr));
 
   return (INVALID_SOCKET != client->sockfd) ? 0 : -1;
 }
 
-int nio_shutdown(niosocket_t *s, int how) {
-  return shutdown(s->sockfd, how);
-}
+int nio_shutdown(niosocket_t *s, int how) { return shutdown(s->sockfd, how); }
 
 int nio_peeraddr(niosocket_t *s, niosockaddr_t *addr) {
   if (addr) {
@@ -649,8 +647,7 @@ int nio_socketnonblock(niosocket_t *s, int on) {
   int flags = fcntl(s->sockfd, F_GETFL, 0);
   if (on) {
     flags |= O_NONBLOCK;
-  }
-  else {
+  } else {
     flags &= ~O_NONBLOCK;
   }
   return 0 == fcntl(s->sockfd, F_SETFL, flags) ? 0 : -1;
@@ -685,13 +682,13 @@ int nio_tcpkeepvalues(niosocket_t *s, int idle, int interval, int count) {
   kl.keepaliveinterval = interval * 1000;
 
   WSAIoctl(s->sockfd, SIO_KEEPALIVE_VALS, &kl, sizeof(kl), &ko, sizeof(ko), &dw,
-    NULL, NULL);
+           NULL, NULL);
 #else
   setsockopt(s->sockfd, IPPROTO_TCP, TCP_KEEPIDLE, (char *)&idle, sizeof(idle));
   setsockopt(s->sockfd, IPPROTO_TCP, TCP_KEEPINTVL, (char *)&interval,
-    sizeof(interval));
+             sizeof(interval));
   setsockopt(s->sockfd, IPPROTO_TCP, TCP_KEEPCNT, (char *)&count,
-    sizeof(count));
+             sizeof(count));
 #endif
   return 0;
 }
@@ -702,7 +699,7 @@ int nio_udpbroadcast(niosocket_t *s, int on) {
 }
 
 int nio_socketreadable(niosocket_t *s, unsigned int timedout) {
-  struct timeval tv = { 0, 0 };
+  struct timeval tv = {0, 0};
   fd_set fds, fd_error;
   int retval;
 
@@ -717,7 +714,8 @@ int nio_socketreadable(niosocket_t *s, unsigned int timedout) {
   }
 
   retval = select(s->sockfd + 1, &fds, NULL, &fd_error, &tv);
-  if (retval < 0) return -1;
+  if (retval < 0)
+    return -1;
 
   if (retval > 0) {
     if (FD_ISSET(s->sockfd, &fd_error))
@@ -730,7 +728,7 @@ int nio_socketreadable(niosocket_t *s, unsigned int timedout) {
 }
 
 int nio_socketwritable(niosocket_t *s, unsigned int timedout) {
-  struct timeval tv = { 0, 0 };
+  struct timeval tv = {0, 0};
   fd_set fds, fd_error;
   int retval;
 
@@ -745,7 +743,8 @@ int nio_socketwritable(niosocket_t *s, unsigned int timedout) {
   }
 
   retval = select(s->sockfd + 1, NULL, &fds, &fd_error, &tv);
-  if (retval < 0) return -1;
+  if (retval < 0)
+    return -1;
 
   if (retval > 0) {
     if (FD_ISSET(s->sockfd, &fd_error))
@@ -762,7 +761,7 @@ int nio_send(niosocket_t *s, const void *buffer, int len) {
   return send(s->sockfd, (const char *)buffer, len, 0);
 #else
   DWORD num = 0;
-  WSABUF wsa_buf = { (ULONG)len, (CHAR *)buffer };
+  WSABUF wsa_buf = {(ULONG)len, (CHAR *)buffer};
 
   if (SOCKET_ERROR == WSASend(s->sockfd, &wsa_buf, 1, &num, 0, NULL, NULL))
     return -1;
@@ -775,7 +774,7 @@ int nio_recv(niosocket_t *s, void *buffer, int len) {
   return recv(s->sockfd, (char *)buffer, len, 0);
 #else
   DWORD num = 0, flag = 0;
-  WSABUF wsa_buf = { (ULONG)len, (CHAR *)buffer };
+  WSABUF wsa_buf = {(ULONG)len, (CHAR *)buffer};
 
   if (SOCKET_ERROR == WSARecv(s->sockfd, &wsa_buf, 1, &num, &flag, NULL, NULL))
     return -1;
@@ -783,17 +782,18 @@ int nio_recv(niosocket_t *s, void *buffer, int len) {
 #endif
 }
 
-int nio_sendto(niosocket_t *s, const niosockaddr_t *addr,
-  const void *buffer, int len) {
+int nio_sendto(niosocket_t *s, const niosockaddr_t *addr, const void *buffer,
+               int len) {
 #ifndef _WIN32
   return sendto(s->sockfd, (const char *)buffer, len, 0,
-    (struct sockaddr *)(&addr->saddr), sockaddr_len(&addr->saddr));
+                (struct sockaddr *)(&addr->saddr), sockaddr_len(&addr->saddr));
 #else
   DWORD num = 0;
-  WSABUF wsa_buf = { (ULONG)len, (CHAR *)buffer };
+  WSABUF wsa_buf = {(ULONG)len, (CHAR *)buffer};
 
   if (SOCKET_ERROR == WSASendTo(s->sockfd, &wsa_buf, 1, &num, 0,
-    (struct sockaddr *)(&addr->saddr), sockaddr_len(&addr->saddr), NULL, NULL))
+                                (struct sockaddr *)(&addr->saddr),
+                                sockaddr_len(&addr->saddr), NULL, NULL))
     return -1;
   return (int)num;
 #endif
@@ -806,13 +806,13 @@ int nio_recvfrom(niosocket_t *s, niosockaddr_t *addr, void *buffer, int len) {
 
 #ifndef _WIN32
   num = recvfrom(s->sockfd, (char *)buffer, len, 0, (struct sockaddr *)&ss,
-    &size);
+                 &size);
 #else
   DWORD flag = 0, rd_num = 0;
-  WSABUF wsa_buf = { (ULONG)len, (CHAR *)buffer };
+  WSABUF wsa_buf = {(ULONG)len, (CHAR *)buffer};
 
   if (SOCKET_ERROR == WSARecvFrom(s->sockfd, &wsa_buf, 1, &rd_num, &flag,
-    (struct sockaddr *)&ss, &size, NULL, NULL))
+                                  (struct sockaddr *)&ss, &size, NULL, NULL))
     return -1;
 
   num = (int)rd_num;
@@ -835,8 +835,7 @@ int nio_sendall(niosocket_t *s, const void *buffer, int len) {
     if (retval >= 0) {
       sent += retval;
       lptr += retval;
-    }
-    else {
+    } else {
       if (!nio_inprogress())
         return -1;
     }
@@ -860,8 +859,7 @@ int nio_recvall(niosocket_t *s, void *buffer, int len) {
     if (retval > 0) {
       total += retval;
       lptr += retval;
-    }
-    else {
+    } else {
       if (0 == retval)
         return total; /* disconnected */
       else {
@@ -879,7 +877,7 @@ int nio_recvall(niosocket_t *s, void *buffer, int len) {
 }
 
 static void ip4_mreq(struct ip_mreq *mreq4,
-  const struct sockaddr_storage *ipaddr) {
+                     const struct sockaddr_storage *ipaddr) {
   struct sockaddr_in *ss_addr = (struct sockaddr_in *)ipaddr;
 
   memset(mreq4, 0, sizeof(struct ip_mreq));
@@ -889,13 +887,13 @@ static void ip4_mreq(struct ip_mreq *mreq4,
 }
 
 static void ip6_mreq(struct ipv6_mreq *mreq6,
-  const struct sockaddr_storage *ipaddr) {
+                     const struct sockaddr_storage *ipaddr) {
   struct sockaddr_in6 *ss_addr = (struct sockaddr_in6 *)ipaddr;
 
   memset(mreq6, 0, sizeof(struct ipv6_mreq));
 
   memcpy(&mreq6->ipv6mr_multiaddr, &ss_addr->sin6_addr,
-    sizeof(struct in6_addr));
+         sizeof(struct in6_addr));
   mreq6->ipv6mr_interface = 0;
 }
 
@@ -905,7 +903,7 @@ int nio_addmembership(niosocket_t *s, const niosockaddr_t *multiaddr) {
 
     ip4_mreq(&mreq, &multiaddr->saddr);
     setsockopt(s->sockfd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&mreq,
-      sizeof(mreq));
+               sizeof(mreq));
 
     return 0;
   }
@@ -915,7 +913,7 @@ int nio_addmembership(niosocket_t *s, const niosockaddr_t *multiaddr) {
 
     ip6_mreq(&mreq, &multiaddr->saddr);
     setsockopt(s->sockfd, IPPROTO_IPV6, IPV6_ADD_MEMBERSHIP, (char *)&mreq,
-      sizeof(mreq));
+               sizeof(mreq));
 
     return 0;
   }
@@ -929,7 +927,7 @@ int nio_dropmembership(niosocket_t *s, const niosockaddr_t *multiaddr) {
 
     ip4_mreq(&mreq, &multiaddr->saddr);
     setsockopt(s->sockfd, IPPROTO_IP, IP_DROP_MEMBERSHIP, (char *)&mreq,
-      sizeof(mreq));
+               sizeof(mreq));
 
     return 0;
   }
@@ -939,7 +937,7 @@ int nio_dropmembership(niosocket_t *s, const niosockaddr_t *multiaddr) {
 
     ip6_mreq(&mreq, &multiaddr->saddr);
     setsockopt(s->sockfd, IPPROTO_IPV6, IPV6_DROP_MEMBERSHIP, (char *)&mreq,
-      sizeof(mreq));
+               sizeof(mreq));
 
     return 0;
   }
@@ -950,13 +948,13 @@ int nio_dropmembership(niosocket_t *s, const niosockaddr_t *multiaddr) {
 int nio_multicastloop(niosocket_t *s, const niosockaddr_t *multiaddr, int on) {
   if (AF_INET == multiaddr->saddr.ss_family) {
     setsockopt(s->sockfd, IPPROTO_IP, IP_MULTICAST_LOOP, (char *)&on,
-      sizeof(on));
+               sizeof(on));
     return 0;
   }
 
   if (AF_INET6 == multiaddr->saddr.ss_family) {
     setsockopt(s->sockfd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, (char *)&on,
-      sizeof(on));
+               sizeof(on));
     return 0;
   }
 
@@ -965,7 +963,7 @@ int nio_multicastloop(niosocket_t *s, const niosockaddr_t *multiaddr, int on) {
 
 int nio_pipe(niosocket_t socks[2]) {
 #ifndef _WIN32
-  SOCKET sv[2] = { INVALID_SOCKET };
+  SOCKET sv[2] = {INVALID_SOCKET};
 
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) < 0)
     return -1;
@@ -976,7 +974,7 @@ int nio_pipe(niosocket_t socks[2]) {
   return 0;
 #else
   niosockaddr_t loopback;
-  niosocket_t listener = { INVALID_SOCKET };
+  niosocket_t listener = {INVALID_SOCKET};
 
   nio_hostaddr(&loopback, "localhost", 0);
   nio_createtcp(&listener, loopback.saddr.ss_family);
@@ -1073,7 +1071,7 @@ int nio_popen(niosocket_t *s, const char *cmdline) {
   niosocket_t socks[2];
   PopenProc *procinfo;
   STARTUPINFOA siStartInfo;
-  char command[MAX_PATH] = { 0 };
+  char command[MAX_PATH] = {0};
   char *cmdexe;
 
   if (nio_pipe(socks) < 0)
@@ -1101,7 +1099,7 @@ int nio_popen(niosocket_t *s, const char *cmdline) {
   snprintf(command, MAX_PATH, "%s /C \"%s\"", cmdexe, cmdline);
 
   if (CreateProcessA(cmdexe, command, NULL, NULL, TRUE, 0, NULL, NULL,
-    &siStartInfo, &procinfo->proc_info)) {
+                     &siStartInfo, &procinfo->proc_info)) {
     int pid;
     unsigned int tid;
     HANDLE h;
@@ -1111,7 +1109,7 @@ int nio_popen(niosocket_t *s, const char *cmdline) {
     nio_socketnonblock(&socks[0], 1);
 
     h = (HANDLE)_beginthreadex(NULL, 0, popen_waitforprocess, procinfo, 0,
-      &tid);
+                               &tid);
     CloseHandle(h);
 
     *s = socks[0];

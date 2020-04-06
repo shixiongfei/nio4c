@@ -1,7 +1,7 @@
 /*
  *  nio4c.c
  *
- *  copyright (c) 2019 Xiongfei Shi
+ *  copyright (c) 2019, 2020 Xiongfei Shi
  *
  *  author: Xiongfei Shi <jenson.shixf(a)gmail.com>
  *  license: Apache-2.0
@@ -9,34 +9,43 @@
  *  https://github.com/shixiongfei/nio4c
  */
 
+#include "nio4c_internal.h"
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#include "nio4c.h"
-#include "internal.h"
 
 #ifdef _WIN32
 #include <stdio.h>
 static WSADATA wsa_data;
-#else  /* _WIN32 */
+#else /* _WIN32 */
 #include <signal.h>
 #endif /* _WIN32 */
 
-nioalloc_t nioalloc = { malloc, free };
-
-void nio_setalloc(void *(*alloc)(size_t), void (*release)(void *)) {
-  nioalloc.alloc = alloc ? alloc : malloc;
-  nioalloc.release = release ? release : free;
+static void *alloc_emul(void *ptr, size_t size) {
+  if (size)
+    return realloc(ptr, size);
+  free(ptr);
+  return NULL;
 }
+
+static void *(*nio_alloc)(void *, size_t) = alloc_emul;
+
+void nio_setalloc(void *(*allocator)(void *, size_t)) {
+  nio_alloc = allocator ? allocator : alloc_emul;
+}
+
+void *nio_realloc(void *ptr, size_t size) { return nio_alloc(ptr, size); }
 
 void *nio_calloc(size_t count, size_t size) {
   void *p = nio_malloc(count * size);
-  if (p) memset(p, 0, count * size);
+  if (p)
+    memset(p, 0, count * size);
   return p;
 }
 
 unsigned long nio_nextpower(unsigned long size) {
-  if (0 == size) return 2;
+  if (0 == size)
+    return 2;
 
   /* fast check if power of two */
   if (0 == (size & (size - 1)))

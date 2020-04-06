@@ -1,7 +1,7 @@
 /*
  *  nio4c.h
  *
- *  copyright (c) 2019 Xiongfei Shi
+ *  copyright (c) 2019, 2020 Xiongfei Shi
  *
  *  author: Xiongfei Shi <jenson.shixf(a)gmail.com>
  *  license: Apache-2.0
@@ -79,7 +79,7 @@
 
 #define NIO_MAJOR 0
 #define NIO_MINOR 1
-#define NIO_PATCH 0
+#define NIO_PATCH 1
 
 #define NIO_VERMAJOR NIO_QUOTE(NIO_MAJOR)
 #define NIO_VERMINOR NIO_QUOTE(NIO_MINOR)
@@ -89,37 +89,35 @@
 #define NIO_VERFULL ((NIO_VERNUM * 100) + NIO_PATCH)
 #define NIO_VERSION (NIO_VERMAJOR "." NIO_VERMINOR "." NIO_VERPATCH)
 
-#define NIO_HI8(x)                                                             \
-  ((unsigned char)((0xFF00U & (unsigned short)(x)) >> 8))
-#define NIO_LO8(x)                                                             \
-  ((unsigned char)( 0x00FFU & (unsigned short)(x)))
+#define NIO_HI8(x) ((unsigned char)((0xFF00U & (unsigned short)(x)) >> 8))
+#define NIO_LO8(x) ((unsigned char)(0x00FFU & (unsigned short)(x)))
 
-#define NIO_HI16(x)                                                            \
-  ((unsigned short)((0xFFFF0000UL & (unsigned int)(x)) >> 16))
-#define NIO_LO16(x)                                                            \
-  ((unsigned short)( 0x0000FFFFUL & (unsigned int)(x)))
+#define NIO_HI16(x) ((unsigned short)((0xFFFF0000UL & (unsigned int)(x)) >> 16))
+#define NIO_LO16(x) ((unsigned short)(0x0000FFFFUL & (unsigned int)(x)))
 
 #define NIO_HI32(x)                                                            \
   ((unsigned int)((0xFFFFFFFF00000000ULL & (uint64_t)(x)) >> 32))
-#define NIO_LO32(x)                                                            \
-  ((unsigned int)( 0x00000000FFFFFFFFULL & (uint64_t)(x)))
+#define NIO_LO32(x) ((unsigned int)(0x00000000FFFFFFFFULL & (uint64_t)(x)))
 
-#define NIO_SWAP16(x) (((0xFF00U & (unsigned short)(x)) >> 8) |                \
-                        ((0x00FFU & (unsigned short)(x)) << 8))
+#define NIO_SWAP16(x)                                                          \
+  (((0xFF00U & (unsigned short)(x)) >> 8) |                                    \
+   ((0x00FFU & (unsigned short)(x)) << 8))
 
-#define NIO_SWAP32(x) (((0xFF000000UL & (unsigned int)(x)) >> 24) |            \
-                        ((0x00FF0000UL & (unsigned int)(x)) >> 8)  |           \
-                        ((0x0000FF00UL & (unsigned int)(x)) << 8)  |           \
-                        ((0x000000FFUL & (unsigned int)(x)) << 24))
+#define NIO_SWAP32(x)                                                          \
+  (((0xFF000000UL & (unsigned int)(x)) >> 24) |                                \
+   ((0x00FF0000UL & (unsigned int)(x)) >> 8) |                                 \
+   ((0x0000FF00UL & (unsigned int)(x)) << 8) |                                 \
+   ((0x000000FFUL & (unsigned int)(x)) << 24))
 
-#define NIO_SWAP64(x) (((0xFF00000000000000ULL & (uint64_t)(x)) >> 56) |       \
-                        ((0x00FF000000000000ULL & (uint64_t)(x)) >> 40) |      \
-                        ((0x0000FF0000000000ULL & (uint64_t)(x)) >> 24) |      \
-                        ((0x000000FF00000000ULL & (uint64_t)(x)) >> 8)  |      \
-                        ((0x00000000FF000000ULL & (uint64_t)(x)) << 8)  |      \
-                        ((0x0000000000FF0000ULL & (uint64_t)(x)) << 24) |      \
-                        ((0x000000000000FF00ULL & (uint64_t)(x)) << 40) |      \
-                        ((0x00000000000000FFULL & (uint64_t)(x)) << 56))
+#define NIO_SWAP64(x)                                                          \
+  (((0xFF00000000000000ULL & (uint64_t)(x)) >> 56) |                           \
+   ((0x00FF000000000000ULL & (uint64_t)(x)) >> 40) |                           \
+   ((0x0000FF0000000000ULL & (uint64_t)(x)) >> 24) |                           \
+   ((0x000000FF00000000ULL & (uint64_t)(x)) >> 8) |                            \
+   ((0x00000000FF000000ULL & (uint64_t)(x)) << 8) |                            \
+   ((0x0000000000FF0000ULL & (uint64_t)(x)) << 24) |                           \
+   ((0x000000000000FF00ULL & (uint64_t)(x)) << 40) |                           \
+   ((0x00000000000000FFULL & (uint64_t)(x)) << 56))
 
 #define NIO_LILENDIAN 1234
 #define NIO_BIGENDIAN 4321
@@ -129,11 +127,10 @@
 #include <endian.h>
 #define NIO_BYTEORDER __BYTE_ORDER
 #else
-#if defined(__hppa__)                                                          \
-  || defined(__m68k__) || defined(mc68000) || defined(_M_M68K)                 \
-  || (defined(__MIPS__) && defined(__MISPEB__))                                \
-  || defined(__ppc__) || defined(__POWERPC__) || defined(_M_PPC)               \
-  || defined(__sparc__)
+#if defined(__hppa__) || defined(__m68k__) || defined(mc68000) ||              \
+    defined(_M_M68K) || (defined(__MIPS__) && defined(__MISPEB__)) ||          \
+    defined(__ppc__) || defined(__POWERPC__) || defined(_M_PPC) ||             \
+    defined(__sparc__)
 #define NIO_BYTEORDER NIO_BIGENDIAN
 #else
 #define NIO_BYTEORDER NIO_LILENDIAN
@@ -189,7 +186,7 @@ typedef struct niohwaddr_s {
   unsigned char hwaddr[NIO_HWADDRLEN];
 } niohwaddr_t;
 
-NIO_API void nio_setalloc(void *(*alloc)(size_t), void (*release)(void *));
+NIO_API void nio_setalloc(void *(*allocator)(void *, size_t));
 
 NIO_API void nio_initialize(void);
 NIO_API void nio_finalize(void);
@@ -242,7 +239,7 @@ NIO_API int nio_socketnonblock(niosocket_t *s, int on);
 NIO_API int nio_reuseaddr(niosocket_t *s, int on);
 NIO_API int nio_tcpnodelay(niosocket_t *s, int on);
 NIO_API int nio_tcpkeepalive(niosocket_t *s, int on);
-NIO_API int nio_tcpkeepvalues(niosocket_t *s, int idle, int interval, 
+NIO_API int nio_tcpkeepvalues(niosocket_t *s, int idle, int interval,
                               int count);
 NIO_API int nio_udpbroadcast(niosocket_t *s, int on);
 
@@ -253,8 +250,8 @@ NIO_API int nio_send(niosocket_t *s, const void *buffer, int len);
 NIO_API int nio_recv(niosocket_t *s, void *buffer, int len);
 NIO_API int nio_sendto(niosocket_t *s, const niosockaddr_t *addr,
                        const void *buffer, int len);
-NIO_API int nio_recvfrom(niosocket_t *s, niosockaddr_t *addr,
-                         void *buffer, int len);
+NIO_API int nio_recvfrom(niosocket_t *s, niosockaddr_t *addr, void *buffer,
+                         int len);
 NIO_API int nio_sendall(niosocket_t *s, const void *buffer, int len);
 NIO_API int nio_recvall(niosocket_t *s, void *buffer, int len);
 
@@ -274,12 +271,12 @@ NIO_API nioselector_t *nio_selector(void);
 
 NIO_API void selector_destroy(nioselector_t *selector);
 NIO_API const char *selector_backend(nioselector_t *selector);
-NIO_API niomonitor_t *selector_register(nioselector_t *selector, 
-                                        niosocket_t *io, 
-                                        int interest, void *ud);
+NIO_API niomonitor_t *selector_register(nioselector_t *selector,
+                                        niosocket_t *io, int interest,
+                                        void *ud);
 NIO_API niomonitor_t *selector_deregister(nioselector_t *selector,
                                           niosocket_t *io);
-NIO_API int selector_select(nioselector_t *selector, niomonitor_t **monitors, 
+NIO_API int selector_select(nioselector_t *selector, niomonitor_t **monitors,
                             int count, unsigned int millisec);
 NIO_API int selector_wakeup(nioselector_t *selector);
 NIO_API int selector_close(nioselector_t *selector);
@@ -304,4 +301,4 @@ NIO_API int monitor_closed(niomonitor_t *monitor);
 };
 #endif
 
-#endif  /* __NIO4C_H__ */
+#endif /* __NIO4C_H__ */

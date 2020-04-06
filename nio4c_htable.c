@@ -1,7 +1,7 @@
 /*
  *  nio4c_htable.c
  *
- *  copyright (c) 2019 Xiongfei Shi
+ *  copyright (c) 2019, 2020 Xiongfei Shi
  *
  *  author: Xiongfei Shi <jenson.shixf(a)gmail.com>
  *  license: Apache-2.0
@@ -9,9 +9,8 @@
  *  https://github.com/shixiongfei/nio4c
  */
 
+#include "nio4c_internal.h"
 #include <limits.h>
-#include "nio4c.h"
-#include "internal.h"
 
 #define HTABLE_INITSIZE 8
 #define HTABLE_MAXSIZE (INT_MAX / 2)
@@ -68,7 +67,8 @@ static int htable_expand(niohtable_t *ht, int size) {
   newused = ht->used;
 
   t = (niohnode_t **)nio_calloc(newsize, sizeof(niohnode_t *));
-  if (!t) return -1;
+  if (!t)
+    return -1;
 
   if (ht->htable) {
     for (i = 0; i < ht->size && ht->used > 0; ++i) {
@@ -103,7 +103,7 @@ static int htable_expandifneeded(niohtable_t *ht) {
 }
 
 int niohtable_set(niohtable_t *ht, niosocket_t *io, niomonitor_t *monitor,
-  niomonitor_t **old) {
+                  niomonitor_t **old) {
   niohnode_t *e, *p = NULL;
   int sockfd;
 
@@ -121,7 +121,8 @@ int niohtable_set(niohtable_t *ht, niosocket_t *io, niomonitor_t *monitor,
 
   while (e) {
     if (sockfd == nio_sockfd(e->io)) {
-      if (old) *old = e->monitor;
+      if (old)
+        *old = e->monitor;
 
       /* replace element */
       if (e->monitor != monitor)
@@ -134,7 +135,8 @@ int niohtable_set(niohtable_t *ht, niosocket_t *io, niomonitor_t *monitor,
 
   /* new element */
   e = (niohnode_t *)nio_malloc(sizeof(niohnode_t));
-  if (!e) return -1;
+  if (!e)
+    return -1;
 
   e->io = io;
   e->monitor = monitor;
@@ -158,7 +160,8 @@ int niohtable_get(niohtable_t *ht, niosocket_t *io, niomonitor_t **monitor) {
 
   while (e) {
     if (sockfd == nio_sockfd(e->io)) {
-      if (monitor) *monitor = e->monitor;
+      if (monitor)
+        *monitor = e->monitor;
       return 0;
     }
     e = e->next;
@@ -184,7 +187,8 @@ int niohtable_erase(niohtable_t *ht, niosocket_t *io, niomonitor_t **monitor) {
       else
         ht->htable[sockfd & ht->mask] = e->next;
 
-      if (monitor) *monitor = e->monitor;
+      if (monitor)
+        *monitor = e->monitor;
       nio_free(e);
       ht->used -= 1;
 
@@ -206,7 +210,7 @@ int niohtable_iter(niohtable_t *ht, niohtableiter_t *iter) {
 }
 
 int niohtable_next(niohtableiter_t *iter, niosocket_t **io,
-  niomonitor_t **monitor) {
+                   niomonitor_t **monitor) {
   while (1) {
     if (!iter->entry) {
       iter->index += 1;
@@ -221,8 +225,10 @@ int niohtable_next(niohtableiter_t *iter, niosocket_t **io,
     if (iter->entry) {
       iter->next = iter->entry->next;
 
-      if (io) *io = iter->entry->io;
-      if (monitor) *monitor = iter->entry->monitor;
+      if (io)
+        *io = iter->entry->io;
+      if (monitor)
+        *monitor = iter->entry->monitor;
 
       return 0;
     }
