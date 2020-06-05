@@ -79,7 +79,7 @@
 
 #define NIO_MAJOR 0
 #define NIO_MINOR 1
-#define NIO_PATCH 1
+#define NIO_PATCH 2
 
 #define NIO_VERMAJOR NIO_QUOTE(NIO_MAJOR)
 #define NIO_VERMINOR NIO_QUOTE(NIO_MINOR)
