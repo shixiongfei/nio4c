@@ -214,6 +214,7 @@ NIO_API int nio_createudp(niosocket_t *s, int af);
 NIO_API int nio_createudp4(niosocket_t *s);
 NIO_API int nio_createudp6(niosocket_t *s);
 
+NIO_API void nio_initsocket(niosocket_t *s);
 NIO_API void nio_destroysocket(niosocket_t *s);
 
 #define nio_sockfd(s) ((s)->sockfd)

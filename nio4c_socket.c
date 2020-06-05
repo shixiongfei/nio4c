@@ -553,6 +553,8 @@ int nio_createudp6(niosocket_t *s) {
   return nio_createsocket(s, AF_INET6, SOCK_DGRAM, IPPROTO_IP);
 }
 
+void nio_initsocket(niosocket_t *s) { s->sockfd = INVALID_SOCKET; }
+
 void nio_destroysocket(niosocket_t *s) {
   if (!s || INVALID_SOCKET == s->sockfd)
     return;
