@@ -79,7 +79,7 @@
 
 #define NIO_MAJOR 0
 #define NIO_MINOR 1
-#define NIO_PATCH 2
+#define NIO_PATCH 3
 
 #define NIO_VERMAJOR NIO_QUOTE(NIO_MAJOR)
 #define NIO_VERMINOR NIO_QUOTE(NIO_MINOR)
@@ -199,6 +199,7 @@ NIO_API int nio_resolvehost(niosockaddr_t *addr_list, int count, int af,
                             const char *hostname, unsigned short port);
 NIO_API int nio_hostaddr(niosockaddr_t *addr, const char *hostname,
                          unsigned short port);
+NIO_API int nio_sockaddrequal(const niosockaddr_t *a, const niosockaddr_t *b);
 NIO_API int nio_ipstr(nioipstr_t *ipstr, const niosockaddr_t *addr);
 
 NIO_API int nio_isnat(const niosockaddr_t *addr);

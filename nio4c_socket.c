@@ -387,6 +387,33 @@ static const char *nio_inetntop(int af, const void *addr, char *strbuf,
 #endif /* _WIN32 */
 }
 
+static int in6_equal(const struct in6_addr *a, const struct in6_addr *b) {
+  return 0 == memcmp(a, b, sizeof(*a));
+}
+
+int nio_sockaddrequal(const niosockaddr_t *a, const niosockaddr_t *b) {
+  if (a->saddr.ss_family != b->saddr.ss_family)
+    return 0;
+
+  switch (a->saddr.ss_family) {
+  case AF_INET: {
+    struct sockaddr_in *a4 = (struct sockaddr_in *)&a->saddr;
+    struct sockaddr_in *b4 = (struct sockaddr_in *)&b->saddr;
+    return a4->sin_addr.s_addr == b4->sin_addr.s_addr &&
+           a4->sin_port == b4->sin_port;
+  }
+  case AF_INET6: {
+    struct sockaddr_in6 *a6 = (struct sockaddr_in6 *)&a->saddr;
+    struct sockaddr_in6 *b6 = (struct sockaddr_in6 *)&b->saddr;
+    return (in6_equal(&a6->sin6_addr, &b6->sin6_addr) &&
+            a6->sin6_port == b6->sin6_port);
+  }
+  default:
+    return 0;
+  }
+  return 0;
+}
+
 #if 0
 static int nio_inetpton(int af, const char *strbuf, void *addr) {
 #ifndef _WIN32
