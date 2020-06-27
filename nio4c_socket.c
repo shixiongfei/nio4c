@@ -582,15 +582,19 @@ int nio_createudp6(niosocket_t *s) {
 
 void nio_initsocket(niosocket_t *s) { s->sockfd = INVALID_SOCKET; }
 
-void nio_destroysocket(niosocket_t *s) {
-  if (!s || INVALID_SOCKET == s->sockfd)
-    return;
-
+void nio_closesocket(niosocket_t* s) {
 #ifndef _WIN32
   close(s->sockfd);
 #else
   closesocket(s->sockfd);
 #endif
+}
+
+void nio_destroysocket(niosocket_t *s) {
+  if (!s || INVALID_SOCKET == s->sockfd)
+    return;
+
+  nio_closesocket(s);
   s->sockfd = INVALID_SOCKET;
 }
 

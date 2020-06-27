@@ -79,7 +79,7 @@
 
 #define NIO_MAJOR 0
 #define NIO_MINOR 1
-#define NIO_PATCH 3
+#define NIO_PATCH 4
 
 #define NIO_VERMAJOR NIO_QUOTE(NIO_MAJOR)
 #define NIO_VERMINOR NIO_QUOTE(NIO_MINOR)
@@ -216,6 +216,7 @@ NIO_API int nio_createudp4(niosocket_t *s);
 NIO_API int nio_createudp6(niosocket_t *s);
 
 NIO_API void nio_initsocket(niosocket_t *s);
+NIO_API void nio_closesocket(niosocket_t* s);
 NIO_API void nio_destroysocket(niosocket_t *s);
 
 #define nio_sockfd(s) ((s)->sockfd)
