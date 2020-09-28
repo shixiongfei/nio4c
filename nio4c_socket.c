@@ -582,7 +582,7 @@ int nio_createudp6(niosocket_t *s) {
 
 void nio_initsocket(niosocket_t *s) { s->sockfd = INVALID_SOCKET; }
 
-void nio_closesocket(niosocket_t* s) {
+void nio_closesocket(niosocket_t *s) {
 #ifndef _WIN32
   close(s->sockfd);
 #else
@@ -988,6 +988,23 @@ int nio_multicastloop(niosocket_t *s, const niosockaddr_t *multiaddr, int on) {
   if (AF_INET6 == multiaddr->saddr.ss_family) {
     setsockopt(s->sockfd, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, (char *)&on,
                sizeof(on));
+    return 0;
+  }
+
+  return -1;
+}
+
+int nio_multicastttl(niosocket_t *s, const niosockaddr_t *multiaddr, int ttl) {
+  if (AF_INET == multiaddr->saddr.ss_family) {
+    unsigned char ucttl = (unsigned char)ttl;
+    setsockopt(s->sockfd, IPPROTO_IP, IP_MULTICAST_TTL, (char *)&ucttl,
+               sizeof(ucttl));
+    return 0;
+  }
+
+  if (AF_INET6 == multiaddr->saddr.ss_family) {
+    setsockopt(s->sockfd, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, (char *)&ttl,
+               sizeof(ttl));
     return 0;
   }
 

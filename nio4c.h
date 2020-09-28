@@ -79,7 +79,7 @@
 
 #define NIO_MAJOR 0
 #define NIO_MINOR 1
-#define NIO_PATCH 4
+#define NIO_PATCH 5
 
 #define NIO_VERMAJOR NIO_QUOTE(NIO_MAJOR)
 #define NIO_VERMINOR NIO_QUOTE(NIO_MINOR)
@@ -216,7 +216,7 @@ NIO_API int nio_createudp4(niosocket_t *s);
 NIO_API int nio_createudp6(niosocket_t *s);
 
 NIO_API void nio_initsocket(niosocket_t *s);
-NIO_API void nio_closesocket(niosocket_t* s);
+NIO_API void nio_closesocket(niosocket_t *s);
 NIO_API void nio_destroysocket(niosocket_t *s);
 
 #define nio_sockfd(s) ((s)->sockfd)
@@ -263,6 +263,8 @@ NIO_API int nio_addmembership(niosocket_t *s, const niosockaddr_t *multiaddr);
 NIO_API int nio_dropmembership(niosocket_t *s, const niosockaddr_t *multiaddr);
 NIO_API int nio_multicastloop(niosocket_t *s, const niosockaddr_t *multiaddr,
                               int on);
+NIO_API int nio_multicastttl(niosocket_t *s, const niosockaddr_t *multiaddr,
+                             int ttl);
 
 NIO_API int nio_pipe(niosocket_t socks[2]);
 NIO_API int nio_popen(niosocket_t *s, const char *cmdline);
