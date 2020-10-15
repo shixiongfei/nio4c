@@ -49,8 +49,6 @@ solution ( "nio4c" )
 
   configuration ( "gmake" )
     warnings  "Default" --"Extra"
-    defines { "LINUX_OR_MACOSX" }
-    links { }
 
   configuration { "gmake", "macosx" }
     defines { "__APPLE__", "__MACH__", "__MRC__", "macintosh" }
@@ -59,6 +57,9 @@ solution ( "nio4c" )
   configuration { "gmake", "linux" }
     defines { "__linux__" }
     links { "m" }
+
+  configuration { "gmake", "bsd" }
+    defines { "__BSD__" }
 
   -- A project defines one build target
   project ( "test" )
@@ -89,10 +90,12 @@ solution ( "nio4c" )
 
   configuration ( "gmake" )
     warnings  "Default" --"Extra"
-    defines { "LINUX_OR_MACOSX" }
 
   configuration { "gmake", "macosx" }
     defines { "__APPLE__", "__MACH__", "__MRC__", "macintosh" }
 
   configuration { "gmake", "linux" }
     defines { "__linux__" }
+
+  configuration { "gmake", "bsd" }
+    defines { "__BSD__" }

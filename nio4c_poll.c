@@ -91,7 +91,7 @@ int niopoll_wait(niopoll_t *p, nioevent_t *evt, int count, int timeout) {
   }
   return ready;
 }
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__BSD__)
 #include <errno.h>
 #include <string.h>
 #include <sys/event.h>
