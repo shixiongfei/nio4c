@@ -21,7 +21,7 @@
 #define TCP_KEEPIDLE TCP_KEEPALIVE
 #endif
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__BSD__)
 #include <net/ethernet.h>
 #include <net/if_arp.h>
 #include <stdio.h>
@@ -264,7 +264,7 @@ int nio_gethwaddr(niohwaddr_t *hwaddr, int count) {
           (IFM_IEEE80211 == IFM_TYPE(ifmed.ifm_active))) {
         struct sockaddr_dl *sdl = (struct sockaddr_dl *)ifa->ifa_addr;
 
-        if (S_HWADDR_LEN == sdl->sdl_alen)
+        if (ETHER_ADDR_LEN == sdl->sdl_alen)
           memcpy(hwaddr[num++].hwaddr, LLADDR(sdl), sdl->sdl_alen);
       }
 #endif
