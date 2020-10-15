@@ -227,6 +227,7 @@ int niohtable_next(niohtableiter_t *iter, niosocket_t **io,
 
       if (io)
         *io = iter->entry->io;
+
       if (monitor)
         *monitor = iter->entry->monitor;
 

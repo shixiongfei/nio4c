@@ -248,10 +248,8 @@ int nio_gethwaddr(niohwaddr_t *hwaddr, int count) {
       close(fd);
 
       if ((ARPHRD_ETHER == ifr.ifr_hwaddr.sa_family) ||
-          (ARPHRD_IEEE80211 == ifr.ifr_hwaddr.sa_family)) {
-        int hwlen = ETHER_ADDR_LEN;
-        memcpy(hwaddr[num++].hwaddr, ifr.ifr_hwaddr.sa_data, hwlen);
-      }
+          (ARPHRD_IEEE80211 == ifr.ifr_hwaddr.sa_family))
+        memcpy(hwaddr[num++].hwaddr, ifr.ifr_hwaddr.sa_data, ETHER_ADDR_LEN);
 #else
       struct ifmediareq ifmed;
 

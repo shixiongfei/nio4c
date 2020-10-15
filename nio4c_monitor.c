@@ -43,8 +43,8 @@ int monitor_close(niomonitor_t *monitor, int deregister) {
 
   if (deregister)
     selector_deregister(monitor->selector, monitor->io);
-  monitor->closed = 1;
 
+  monitor->closed = 1;
   return 0;
 }
 
