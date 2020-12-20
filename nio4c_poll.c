@@ -3,7 +3,7 @@
  *
  *  copyright (c) 2019, 2020 Xiongfei Shi
  *
- *  author: Xiongfei Shi <jenson.shixf(a)gmail.com>
+ *  author: Xiongfei Shi <xiongfei.shi(a)icloud.com>
  *  license: Apache-2.0
  *
  *  https://github.com/shixiongfei/nio4c
@@ -15,13 +15,66 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
-struct niopoll_s {
-  int backend;
-  int epfd;
-};
+typedef struct nioepoll_s {
+  niopoll_t np;
+  int fd;
+} nioepoll_t;
 
-niopoll_t *niopoll_create(void) {
-  niopoll_t *p;
+static const char *nioepoll_backend(niopoll_t *p) { return "epoll"; }
+
+static void nioepoll_destroy(niopoll_t *p) {
+  nioepoll_t *ep = nio_entry(p, nioepoll_t, np);
+  close(ep->fd);
+  nio_free(ep);
+}
+
+static int nioepoll_register(niopoll_t *p, int fd, void *userdata) {
+  nioepoll_t *ep = nio_entry(p, nioepoll_t, np);
+  struct epoll_event ev;
+
+  ev.events = 0;
+  ev.data.ptr = userdata;
+
+  return (epoll_ctl(ep->fd, EPOLL_CTL_ADD, fd, &ev) < 0) ? -1 : 0;
+}
+
+static int nioepoll_deregister(niopoll_t *p, int fd) {
+  nioepoll_t *ep = nio_entry(p, nioepoll_t, np);
+  return (epoll_ctl(ep->fd, EPOLL_CTL_DEL, fd, NULL) < 0) ? -1 : 0;
+}
+
+static int nioepoll_ioevent(niopoll_t *p, int fd, int readable, int writeable,
+                            void *userdata) {
+  nioepoll_t *ep = nio_entry(p, nioepoll_t, np);
+  struct epoll_event ev;
+
+  ev.events = (readable ? EPOLLIN : 0) | (writeable ? EPOLLOUT : 0);
+  ev.data.ptr = userdata;
+
+  return (epoll_ctl(ep->fd, EPOLL_CTL_MOD, fd, &ev) < 0) ? -1 : 0;
+}
+
+static int nioepoll_wait(niopoll_t *p, nioevent_t *evt, int count,
+                         int timeout) {
+  nioepoll_t *ep = nio_entry(p, nioepoll_t, np);
+  struct epoll_event ev[count];
+  int ready, i;
+
+  ready = epoll_wait(ep->fd, ev, count, timeout);
+
+  for (i = 0; i < ready; ++i) {
+    evt[i].fd = ev[i].data.fd;
+    evt[i].userdata = ev[i].data.ptr;
+
+    evt[i].error = !!(ev[i].events & EPOLLERR);
+    evt[i].readable = !!(ev[i].events & (EPOLLIN | EPOLLHUP));
+    evt[i].writeable = !!(ev[i].events & EPOLLOUT);
+  }
+  return ready;
+}
+
+static niopoll_t *nioepoll_create(void) {
+  nioepoll_t *ep;
   int epfd = -1;
 
 #ifdef EPOLL_CLOEXEC
@@ -38,58 +91,16 @@ niopoll_t *niopoll_create(void) {
   fcntl(epfd, F_SETFD, FD_CLOEXEC);
 #endif
 
-  p = (niopoll_t *)nio_malloc(sizeof(niopoll_t));
-  p->backend = NIO_EPOLL;
-  p->epfd = epfd;
+  ep = (nioepoll_t *)nio_malloc(sizeof(nioepoll_t));
+  ep->fd = epfd;
+  ep->np.method_backend = nioepoll_backend;
+  ep->np.method_destroy = nioepoll_destroy;
+  ep->np.method_register = nioepoll_register;
+  ep->np.method_deregister = nioepoll_deregister;
+  ep->np.method_ioevent = nioepoll_ioevent;
+  ep->np.method_wait = nioepoll_wait;
 
-  return p;
-}
-
-void niopoll_destroy(niopoll_t *p) {
-  close(p->epfd);
-  nio_free(p);
-}
-
-int niopoll_backend(niopoll_t *p) { return p->backend; }
-
-int niopoll_register(niopoll_t *p, int fd, void *userdata) {
-  struct epoll_event ev;
-
-  ev.events = 0;
-  ev.data.ptr = userdata;
-
-  return (epoll_ctl(p->epfd, EPOLL_CTL_ADD, fd, &ev) < 0) ? -1 : 0;
-}
-
-int niopoll_deregister(niopoll_t *p, int fd) {
-  return (epoll_ctl(p->epfd, EPOLL_CTL_DEL, fd, NULL) < 0) ? -1 : 0;
-}
-
-int niopoll_ioevent(niopoll_t *p, int fd, int readable, int writeable,
-                    void *userdata) {
-  struct epoll_event ev;
-
-  ev.events = (readable ? EPOLLIN : 0) | (writeable ? EPOLLOUT : 0);
-  ev.data.ptr = userdata;
-
-  return (epoll_ctl(p->epfd, EPOLL_CTL_MOD, fd, &ev) < 0) ? -1 : 0;
-}
-
-int niopoll_wait(niopoll_t *p, nioevent_t *evt, int count, int timeout) {
-  struct epoll_event ev[count];
-  int ready, i;
-
-  ready = epoll_wait(p->epfd, ev, count, timeout);
-
-  for (i = 0; i < ready; ++i) {
-    evt[i].fd = ev[i].data.fd;
-    evt[i].userdata = ev[i].data.ptr;
-
-    evt[i].error = !!(ev[i].events & EPOLLERR);
-    evt[i].readable = !!(ev[i].events & (EPOLLIN | EPOLLHUP));
-    evt[i].writeable = !!(ev[i].events & EPOLLOUT);
-  }
-  return ready;
+  return &ep->np;
 }
 #elif defined(__APPLE__) || defined(__BSD__)
 #include <errno.h>
@@ -99,82 +110,73 @@ int niopoll_wait(niopoll_t *p, nioevent_t *evt, int count, int timeout) {
 #include <sys/types.h>
 #include <unistd.h>
 
-struct niopoll_s {
-  int backend;
-  int kqfd;
-};
+typedef struct niokqueue_s {
+  niopoll_t np;
+  int fd;
+} niokqueue_t;
 
-niopoll_t *niopoll_create(void) {
-  niopoll_t *p;
-  int kqfd;
+static const char *niokqueue_backend(niopoll_t *p) { return "kqueue"; }
 
-  kqfd = kqueue();
-  if (kqfd < 0)
-    return NULL;
-
-  p = (niopoll_t *)nio_malloc(sizeof(niopoll_t));
-  p->backend = NIO_KQUEUE;
-  p->kqfd = kqfd;
-
-  return p;
+static void niokqueue_destroy(niopoll_t *p) {
+  niokqueue_t *kq = nio_entry(p, niokqueue_t, np);
+  close(kq->fd);
+  nio_free(kq);
 }
 
-void niopoll_destroy(niopoll_t *p) {
-  close(p->kqfd);
-  nio_free(p);
-}
-
-int niopoll_backend(niopoll_t *p) { return p->backend; }
-
-int niopoll_register(niopoll_t *p, int fd, void *userdata) {
+static int niokqueue_register(niopoll_t *p, int fd, void *userdata) {
+  niokqueue_t *kq = nio_entry(p, niokqueue_t, np);
   struct kevent ke;
 
   EV_SET(&ke, fd, EVFILT_READ, EV_ADD | EV_DISABLE, 0, 0, userdata);
-  if ((kevent(p->kqfd, &ke, 1, NULL, 0, NULL) < 0) || (ke.flags & EV_ERROR))
+  if ((kevent(kq->fd, &ke, 1, NULL, 0, NULL) < 0) || (ke.flags & EV_ERROR))
     goto reterr;
 
   EV_SET(&ke, fd, EVFILT_WRITE, EV_ADD | EV_DISABLE, 0, 0, userdata);
-  if ((kevent(p->kqfd, &ke, 1, NULL, 0, NULL) < 0) || (ke.flags & EV_ERROR))
+  if ((kevent(kq->fd, &ke, 1, NULL, 0, NULL) < 0) || (ke.flags & EV_ERROR))
     goto clean;
 
   return 0;
 
 clean:
   EV_SET(&ke, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-  kevent(p->kqfd, &ke, 1, NULL, 0, NULL);
+  kevent(kq->fd, &ke, 1, NULL, 0, NULL);
 
 reterr:
   return -1;
 }
 
-int niopoll_deregister(niopoll_t *p, int fd) {
+static int niokqueue_deregister(niopoll_t *p, int fd) {
+  niokqueue_t *kq = nio_entry(p, niokqueue_t, np);
   struct kevent ke;
 
   EV_SET(&ke, fd, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-  kevent(p->kqfd, &ke, 1, NULL, 0, NULL);
+  kevent(kq->fd, &ke, 1, NULL, 0, NULL);
 
   EV_SET(&ke, fd, EVFILT_WRITE, EV_DELETE, 0, 0, NULL);
-  kevent(p->kqfd, &ke, 1, NULL, 0, NULL);
+  kevent(kq->fd, &ke, 1, NULL, 0, NULL);
 
   return 0;
 }
 
-int niopoll_ioevent(niopoll_t *p, int fd, int readable, int writeable,
-                    void *userdata) {
+static int niokqueue_ioevent(niopoll_t *p, int fd, int readable, int writeable,
+                             void *userdata) {
+  niokqueue_t *kq = nio_entry(p, niokqueue_t, np);
   struct kevent ke;
 
   EV_SET(&ke, fd, EVFILT_READ, readable ? EV_ENABLE : EV_DISABLE, 0, 0,
          userdata);
-  kevent(p->kqfd, &ke, 1, NULL, 0, NULL);
+  kevent(kq->fd, &ke, 1, NULL, 0, NULL);
 
   EV_SET(&ke, fd, EVFILT_WRITE, writeable ? EV_ENABLE : EV_DISABLE, 0, 0,
          userdata);
-  kevent(p->kqfd, &ke, 1, NULL, 0, NULL);
+  kevent(kq->fd, &ke, 1, NULL, 0, NULL);
 
   return 0;
 }
 
-int niopoll_wait(niopoll_t *p, nioevent_t *evt, int count, int timeout) {
+static int niokqueue_wait(niopoll_t *p, nioevent_t *evt, int count,
+                          int timeout) {
+  niokqueue_t *kq = nio_entry(p, niokqueue_t, np);
   struct kevent ev[count];
   struct timespec ts;
   struct timespec *ts_timeout;
@@ -192,7 +194,7 @@ int niopoll_wait(niopoll_t *p, nioevent_t *evt, int count, int timeout) {
     ts_timeout = &ts;
   }
 
-  ready = kevent(p->kqfd, NULL, 0, ev, count, ts_timeout);
+  ready = kevent(kq->fd, NULL, 0, ev, count, ts_timeout);
 
   for (i = 0; i < ready; ++i) {
     evt[i].fd = ev[i].ident;
@@ -203,6 +205,26 @@ int niopoll_wait(niopoll_t *p, nioevent_t *evt, int count, int timeout) {
     evt[i].writeable = (EVFILT_WRITE == ev[i].filter);
   }
   return ready;
+}
+
+static niopoll_t *niokqueue_create(void) {
+  niokqueue_t *kq;
+  int kqfd;
+
+  kqfd = kqueue();
+  if (kqfd < 0)
+    return NULL;
+
+  kq = (niokqueue_t *)nio_malloc(sizeof(niokqueue_t));
+  kq->fd = kqfd;
+  kq->np.method_backend = niokqueue_backend;
+  kq->np.method_destroy = niokqueue_destroy;
+  kq->np.method_register = niokqueue_register;
+  kq->np.method_deregister = niokqueue_deregister;
+  kq->np.method_ioevent = niokqueue_ioevent;
+  kq->np.method_wait = niokqueue_wait;
+
+  return &kq->np;
 }
 #else
 #if defined(_WIN32)
@@ -236,99 +258,89 @@ typedef struct sockfd {
   void *ud;
 } sockfd;
 
-struct niopoll_s {
-  int backend;
+typedef struct nioselect_s {
+  niopoll_t np;
   int nfds;
   struct sockfd sfds[FD_SETSIZE];
-};
+} nioselect_t;
 
-niopoll_t *niopoll_create(void) {
-  niopoll_t *p = (niopoll_t *)nio_malloc(sizeof(niopoll_t));
-  int i;
+static const char *nioselect_backend(niopoll_t *p) { return "select"; }
 
-  for (i = 0; i < FD_SETSIZE; ++i) {
-    p->sfds[i].fd = INVALID_SOCKET;
-    p->sfds[i].events = NIO_NIL;
-    p->sfds[i].revents = NIO_NIL;
-    p->sfds[i].ud = NULL;
-  }
-  p->nfds = 0;
-  p->backend = NIO_SELECT;
-
-  return p;
+static void nioselect_destroy(niopoll_t *p) {
+  nioselect_t *sp = nio_entry(p, nioselect_t, np);
+  nio_free(sp);
 }
 
-void niopoll_destroy(niopoll_t *p) { nio_free(p); }
-
-int niopoll_backend(niopoll_t *p) { return p->backend; }
-
-int niopoll_register(niopoll_t *p, int fd, void *userdata) {
+static int nioselect_register(niopoll_t *p, int fd, void *userdata) {
+  nioselect_t *sp = nio_entry(p, nioselect_t, np);
   int i;
 
-  if (p->nfds >= FD_SETSIZE)
+  if (sp->nfds >= FD_SETSIZE)
     return -1;
 
-  for (i = 0; i < p->nfds; ++i)
-    if (p->sfds[i].fd == fd)
+  for (i = 0; i < sp->nfds; ++i)
+    if (sp->sfds[i].fd == fd)
       return -1;
 
-  i = p->nfds;
+  i = sp->nfds;
 
-  p->sfds[i].fd = fd;
-  p->sfds[i].events = NIO_NIL;
-  p->sfds[i].revents = NIO_NIL;
-  p->sfds[i].ud = userdata;
+  sp->sfds[i].fd = fd;
+  sp->sfds[i].events = NIO_NIL;
+  sp->sfds[i].revents = NIO_NIL;
+  sp->sfds[i].ud = userdata;
 
-  p->nfds += 1;
+  sp->nfds += 1;
   return 0;
 }
 
-int niopoll_deregister(niopoll_t *p, int fd) {
+static int nioselect_deregister(niopoll_t *p, int fd) {
+  nioselect_t *sp = nio_entry(p, nioselect_t, np);
   int i, last;
 
-  if (p->nfds <= 0)
+  if (sp->nfds <= 0)
     return -1;
 
-  last = p->nfds - 1;
+  last = sp->nfds - 1;
 
-  if (p->sfds[last].fd == fd) {
-    p->sfds[last].fd = INVALID_SOCKET;
-    p->sfds[last].events = NIO_NIL;
-    p->sfds[last].revents = NIO_NIL;
-    p->sfds[last].ud = NULL;
+  if (sp->sfds[last].fd == fd) {
+    sp->sfds[last].fd = INVALID_SOCKET;
+    sp->sfds[last].events = NIO_NIL;
+    sp->sfds[last].revents = NIO_NIL;
+    sp->sfds[last].ud = NULL;
 
-    p->nfds -= 1;
+    sp->nfds -= 1;
     return 0;
   }
 
   for (i = 0; i < last; ++i) {
-    if (p->sfds[i].fd == fd) {
-      p->sfds[i].fd = p->sfds[last].fd;
-      p->sfds[i].events = p->sfds[last].events;
-      p->sfds[i].revents = p->sfds[last].revents;
-      p->sfds[i].ud = p->sfds[last].ud;
+    if (sp->sfds[i].fd == fd) {
+      sp->sfds[i].fd = sp->sfds[last].fd;
+      sp->sfds[i].events = sp->sfds[last].events;
+      sp->sfds[i].revents = sp->sfds[last].revents;
+      sp->sfds[i].ud = sp->sfds[last].ud;
 
-      p->sfds[last].fd = INVALID_SOCKET;
-      p->sfds[last].events = NIO_NIL;
-      p->sfds[last].revents = NIO_NIL;
-      p->sfds[last].ud = NULL;
+      sp->sfds[last].fd = INVALID_SOCKET;
+      sp->sfds[last].events = NIO_NIL;
+      sp->sfds[last].revents = NIO_NIL;
+      sp->sfds[last].ud = NULL;
 
-      p->nfds -= 1;
+      sp->nfds -= 1;
       return 0;
     }
   }
   return -1;
 }
 
-int niopoll_ioevent(niopoll_t *p, int fd, int readable, int writeable,
-                    void *userdata) {
+static int nioselect_ioevent(niopoll_t *p, int fd, int readable, int writeable,
+                             void *userdata) {
+  nioselect_t *sp = nio_entry(p, nioselect_t, np);
   int i;
 
-  for (i = 0; i < p->nfds; ++i) {
-    if (p->sfds[i].fd == fd) {
-      p->sfds[i].events =
+  for (i = 0; i < sp->nfds; ++i) {
+    if (sp->sfds[i].fd == fd) {
+      sp->sfds[i].events =
           (readable ? FD_POLLIN : 0) | (writeable ? FD_POLLOUT : 0);
-      p->sfds[i].ud = userdata;
+      sp->sfds[i].ud = userdata;
       return 0;
     }
   }
@@ -349,7 +361,9 @@ static struct timeval *map_timeout(int millisec, struct timeval *timeout) {
   return timeout;
 }
 
-int niopoll_wait(niopoll_t *p, nioevent_t *evt, int count, int timeout) {
+static int nioselect_wait(niopoll_t *p, nioevent_t *evt, int count,
+                          int timeout) {
+  nioselect_t *sp = nio_entry(p, nioselect_t, np);
   fd_set read_fds;
   fd_set write_fds;
   fd_set except_fds;
@@ -361,25 +375,25 @@ int niopoll_wait(niopoll_t *p, nioevent_t *evt, int count, int timeout) {
   FD_ZERO(&write_fds);
   FD_ZERO(&except_fds);
 
-  for (i = 0; i < p->nfds; ++i) {
-    if (p->sfds[i].fd == INVALID_SOCKET)
+  for (i = 0; i < sp->nfds; ++i) {
+    if (sp->sfds[i].fd == INVALID_SOCKET)
       continue;
 
-    if (p->sfds[i].events == NIO_NIL)
+    if (sp->sfds[i].events == NIO_NIL)
       continue;
 
-    p->sfds[i].revents = 0;
+    sp->sfds[i].revents = 0;
 
-    if (p->sfds[i].events & FD_POLLIN)
-      FD_SET(p->sfds[i].fd, &read_fds);
+    if (sp->sfds[i].events & FD_POLLIN)
+      FD_SET(sp->sfds[i].fd, &read_fds);
 
-    if (p->sfds[i].events & FD_POLLOUT)
-      FD_SET(p->sfds[i].fd, &write_fds);
+    if (sp->sfds[i].events & FD_POLLOUT)
+      FD_SET(sp->sfds[i].fd, &write_fds);
 
-    if (p->sfds[i].events & FD_POLLERR)
-      FD_SET(p->sfds[i].fd, &except_fds);
+    if (sp->sfds[i].events & FD_POLLERR)
+      FD_SET(sp->sfds[i].fd, &except_fds);
 
-    max_fd = max(max_fd, p->sfds[i].fd);
+    max_fd = max(max_fd, sp->sfds[i].fd);
   }
 
   ready = select(max_fd + 1, &read_fds, &write_fds, &except_fds,
@@ -388,25 +402,25 @@ int niopoll_wait(niopoll_t *p, nioevent_t *evt, int count, int timeout) {
   if (ready >= 0) {
     max_n = min(ready, count);
 
-    for (i = 0; i < p->nfds && j < max_n; ++i) {
-      if (p->sfds[i].fd == INVALID_SOCKET)
+    for (i = 0; i < sp->nfds && j < max_n; ++i) {
+      if (sp->sfds[i].fd == INVALID_SOCKET)
         continue;
 
-      if (FD_ISSET(p->sfds[i].fd, &except_fds))
-        p->sfds[i].revents |= FD_POLLERR;
+      if (FD_ISSET(sp->sfds[i].fd, &except_fds))
+        sp->sfds[i].revents |= FD_POLLERR;
 
-      if (FD_ISSET(p->sfds[i].fd, &read_fds))
-        p->sfds[i].revents |= FD_POLLIN;
+      if (FD_ISSET(sp->sfds[i].fd, &read_fds))
+        sp->sfds[i].revents |= FD_POLLIN;
 
-      if (FD_ISSET(p->sfds[i].fd, &write_fds))
-        p->sfds[i].revents |= FD_POLLOUT;
+      if (FD_ISSET(sp->sfds[i].fd, &write_fds))
+        sp->sfds[i].revents |= FD_POLLOUT;
 
-      if (NIO_NIL != p->sfds[i].revents) {
-        evt[j].fd = p->sfds[i].fd;
-        evt[j].userdata = p->sfds[i].ud;
-        evt[j].error = !!(p->sfds[i].revents & FD_POLLERR);
-        evt[j].readable = !!(p->sfds[i].revents & FD_POLLIN);
-        evt[j].writeable = !!(p->sfds[i].revents & FD_POLLOUT);
+      if (NIO_NIL != sp->sfds[i].revents) {
+        evt[j].fd = sp->sfds[i].fd;
+        evt[j].userdata = sp->sfds[i].ud;
+        evt[j].error = !!(sp->sfds[i].revents & FD_POLLERR);
+        evt[j].readable = !!(sp->sfds[i].revents & FD_POLLIN);
+        evt[j].writeable = !!(sp->sfds[i].revents & FD_POLLOUT);
 
         j += 1;
       }
@@ -415,4 +429,45 @@ int niopoll_wait(niopoll_t *p, nioevent_t *evt, int count, int timeout) {
 
   return j;
 }
+
+static niopoll_t *nioselect_create(void) {
+  nioselect_t *sp = (nioselect_t *)nio_malloc(sizeof(nioselect_t));
+  int i;
+
+  for (i = 0; i < FD_SETSIZE; ++i) {
+    sp->sfds[i].fd = INVALID_SOCKET;
+    sp->sfds[i].events = NIO_NIL;
+    sp->sfds[i].revents = NIO_NIL;
+    sp->sfds[i].ud = NULL;
+  }
+  sp->nfds = 0;
+
+  sp->np.method_backend = nioselect_backend;
+  sp->np.method_destroy = nioselect_destroy;
+  sp->np.method_register = nioselect_register;
+  sp->np.method_deregister = nioselect_deregister;
+  sp->np.method_ioevent = nioselect_ioevent;
+  sp->np.method_wait = nioselect_wait;
+
+  return &sp->np;
+}
 #endif
+
+nio_pollcreator nio_pollcreate = NULL;
+
+int nio_pollinit(nio_pollcreator creator) {
+  if (creator)
+    nio_pollcreate = creator;
+
+  if (!nio_pollcreate) {
+#if defined(__linux__)
+    nio_pollcreate = nioepoll_create;
+#elif defined(__APPLE__) || defined(__BSD__)
+    nio_pollcreate = niokqueue_create;
+#else
+    nio_pollcreate = nioselect_create;
+#endif
+  }
+
+  return nio_pollcreate ? 0 : -1;
+}

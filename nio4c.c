@@ -3,7 +3,7 @@
  *
  *  copyright (c) 2019, 2020 Xiongfei Shi
  *
- *  author: Xiongfei Shi <jenson.shixf(a)gmail.com>
+ *  author: Xiongfei Shi <xiongfei.shi(a)icloud.com>
  *  license: Apache-2.0
  *
  *  https://github.com/shixiongfei/nio4c
@@ -65,13 +65,14 @@ unsigned long nio_nextpower(unsigned long size) {
   return size;
 }
 
-void nio_initialize(void) {
+int nio_initialize(nio_pollcreator creator) {
 #ifdef _WIN32
   _setmaxstdio(2048);
   WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #else
   signal(SIGPIPE, SIG_IGN);
 #endif
+  return nio_pollinit(creator);
 }
 
 void nio_finalize(void) {

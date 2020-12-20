@@ -3,7 +3,7 @@
  *
  *  copyright (c) 2019, 2020 Xiongfei Shi
  *
- *  author: Xiongfei Shi <jenson.shixf(a)gmail.com>
+ *  author: Xiongfei Shi <xiongfei.shi(a)icloud.com>
  *  license: Apache-2.0
  *
  *  https://github.com/shixiongfei/nio4c
@@ -25,7 +25,7 @@ nioselector_t *nio_selector(void) {
     return NULL;
   }
 
-  selector->selector = niopoll_create();
+  selector->selector = nio_pollcreate();
   selector->wakeup = sock_pipe[0];
   selector->waker = sock_pipe[1];
   selector->closed = 0;
@@ -52,18 +52,7 @@ void selector_destroy(nioselector_t *selector) {
 }
 
 const char *selector_backend(nioselector_t *selector) {
-  switch (niopoll_backend(selector->selector)) {
-  case NIO_EPOLL:
-    return "epoll";
-  case NIO_KQUEUE:
-    return "kqueue";
-  case NIO_SELECT:
-    return "select";
-  case NIO_NONE:
-  default:
-    return "unknown";
-  }
-  return NULL; /* never return! */
+  return niopoll_backend(selector->selector);
 }
 
 niomonitor_t *selector_register(nioselector_t *selector, niosocket_t *io,

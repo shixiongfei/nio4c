@@ -3,7 +3,7 @@
  *
  *  copyright (c) 2019, 2020 Xiongfei Shi
  *
- *  author: Xiongfei Shi <jenson.shixf(a)gmail.com>
+ *  author: Xiongfei Shi <xiongfei.shi(a)icloud.com>
  *  license: Apache-2.0
  *
  *  https://github.com/shixiongfei/nio4c
@@ -11,6 +11,8 @@
 
 #ifndef __NIO4C_H__
 #define __NIO4C_H__
+
+#include <stddef.h>
 
 #ifndef _WIN32
 #include <arpa/inet.h>
@@ -78,7 +80,7 @@
 #define NIO_QUOTE(x) NIO_QUOTEX(x)
 
 #define NIO_MAJOR 0
-#define NIO_MINOR 2
+#define NIO_MINOR 3
 #define NIO_PATCH 0
 
 #define NIO_VERMAJOR NIO_QUOTE(NIO_MAJOR)
@@ -165,6 +167,9 @@
 #define NIO_WRITE 2
 #define NIO_READWRITE (NIO_READ | NIO_WRITE)
 
+#define nio_entry(ptr, type, member)                                           \
+  ((type *)((char *)(ptr)-offsetof(type, member)))
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -186,9 +191,30 @@ typedef struct niohwaddr_s {
   unsigned char hwaddr[NIO_HWADDRLEN];
 } niohwaddr_t;
 
+typedef struct nioevent_s {
+  int fd;
+  int error;
+  int readable;
+  int writeable;
+  void *userdata;
+} nioevent_t;
+
+typedef struct niopoll_s {
+  const char *(*method_backend)(struct niopoll_s *p);
+  void (*method_destroy)(struct niopoll_s *p);
+  int (*method_register)(struct niopoll_s *p, int fd, void *userdata);
+  int (*method_deregister)(struct niopoll_s *p, int fd);
+  int (*method_ioevent)(struct niopoll_s *p, int fd, int readable,
+                        int writeable, void *userdata);
+  int (*method_wait)(struct niopoll_s *p, nioevent_t *evt, int count,
+                     int timeout);
+} niopoll_t;
+
+typedef niopoll_t *(*nio_pollcreator)(void);
+
 NIO_API void nio_setalloc(void *(*allocator)(void *, size_t));
 
-NIO_API void nio_initialize(void);
+NIO_API int nio_initialize(nio_pollcreator creator);
 NIO_API void nio_finalize(void);
 
 NIO_API unsigned short nio_checksum(const void *buffer, int len);

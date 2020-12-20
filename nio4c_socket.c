@@ -3,7 +3,7 @@
  *
  *  copyright (c) 2019, 2020 Xiongfei Shi
  *
- *  author: Xiongfei Shi <jenson.shixf(a)gmail.com>
+ *  author: Xiongfei Shi <xiongfei.shi(a)icloud.com>
  *  license: Apache-2.0
  *
  *  https://github.com/shixiongfei/nio4c
@@ -597,11 +597,10 @@ void nio_destroysocket(niosocket_t *s) {
 }
 
 #define sockaddr_len(a)                                                        \
-  ((NULL == (a))                                                               \
-       ? 0                                                                     \
-       : (AF_INET == (a)->ss_family)                                           \
-             ? sizeof(struct sockaddr_in)                                      \
-             : (AF_INET6 == (a)->ss_family) ? sizeof(struct sockaddr_in6) : 0)
+  ((NULL == (a))                  ? 0                                          \
+   : (AF_INET == (a)->ss_family)  ? sizeof(struct sockaddr_in)                 \
+   : (AF_INET6 == (a)->ss_family) ? sizeof(struct sockaddr_in6)                \
+                                  : 0)
 
 int nio_bind(niosocket_t *s, const niosockaddr_t *addr) {
   return bind(s->sockfd, (struct sockaddr *)(&addr->saddr),

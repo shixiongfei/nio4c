@@ -3,16 +3,16 @@
  *
  *  copyright (c) 2019 Xiongfei Shi
  *
- *  author: Xiongfei Shi <jenson.shixf(a)gmail.com>
+ *  author: Xiongfei Shi <xiongfei.shi(a)icloud.com>
  *  license: Apache-2.0
  *
  *  https://github.com/shixiongfei/nio4c
  */
 
-#include <stdio.h>
 #include "nio4c.h"
+#include <stdio.h>
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   niohwaddr_t hwaddrs[8];
   niosockaddr_t ipaddr;
   nioipstr_t ipstr;
@@ -23,9 +23,10 @@ int main(int argc, char* argv[]) {
   niomonitor_t *monitors[4];
   int n, i, j, k;
 
-  ((void)argc); ((void)argv);
+  ((void)argc);
+  ((void)argv);
 
-  nio_initialize();
+  nio_initialize(NULL);
 
   printf("nio4c version: %s\n", NIO_VERSION);
 
@@ -92,7 +93,7 @@ int main(int argc, char* argv[]) {
 
           monitor_close(monitors[i], 1);
         } else {
-          char buffer[16] = { 0 };
+          char buffer[16] = {0};
 
           k = nio_recv(monitor_io(monitors[i]), buffer, sizeof(buffer));
           nio_sockipstr(monitor_io(monitors[i]), &ipstr);
@@ -128,6 +129,6 @@ int main(int argc, char* argv[]) {
 
   selector_destroy(selector);
   nio_finalize();
-  
+
   return 0;
 }

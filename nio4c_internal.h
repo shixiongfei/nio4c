@@ -3,7 +3,7 @@
  *
  *  copyright (c) 2019, 2020 Xiongfei Shi
  *
- *  author: Xiongfei Shi <jenson.shixf(a)gmail.com>
+ *  author: Xiongfei Shi <xiongfei.shi(a)icloud.com>
  *  license: Apache-2.0
  *
  *  https://github.com/shixiongfei/nio4c
@@ -33,32 +33,17 @@ void *nio_calloc(size_t count, size_t size);
 #endif
 
 unsigned long nio_nextpower(unsigned long size);
-char *nio_strdup(const char *str);
 
-#define NIO_NONE 0
-#define NIO_EPOLL 1
-#define NIO_KQUEUE 2
-#define NIO_SELECT 3
+extern nio_pollcreator nio_pollcreate;
+int nio_pollinit(nio_pollcreator creator);
 
-typedef struct niopoll_s niopoll_t;
-
-typedef struct nioevent_s {
-  int fd;
-  int error;
-  int readable;
-  int writeable;
-  void *userdata;
-} nioevent_t;
-
-niopoll_t *niopoll_create(void);
-void niopoll_destroy(niopoll_t *p);
-
-int niopoll_backend(niopoll_t *p);
-int niopoll_register(niopoll_t *p, int fd, void *userdata);
-int niopoll_deregister(niopoll_t *p, int fd);
-int niopoll_ioevent(niopoll_t *p, int fd, int readable, int writeable,
-                    void *userdata);
-int niopoll_wait(niopoll_t *p, nioevent_t *evt, int count, int timeout);
+#define niopoll_backend(p) (p)->method_backend(p)
+#define niopoll_destroy(p) (p)->method_destroy(p)
+#define niopoll_register(p, fd, ud) (p)->method_register(p, fd, ud)
+#define niopoll_deregister(p, fd) (p)->method_deregister(p, fd)
+#define niopoll_ioevent(p, fd, rd, wd, ud)                                     \
+  (p)->method_ioevent(p, fd, rd, wd, ud)
+#define niopoll_wait(p, e, c, t) (p)->method_wait(p, e, c, t)
 
 typedef struct niohnode_s niohnode_t;
 
