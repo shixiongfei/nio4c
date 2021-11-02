@@ -19,6 +19,10 @@
 #include <IOKit/network/IONetworkInterface.h>
 
 #define TCP_KEEPIDLE TCP_KEEPALIVE
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 120000 // Before macOS 12 Monterey
+#define kIOMainPortDefault kIOMasterPortDefault
+#endif
 #endif
 
 #if defined(__linux__) || defined(__BSD__)
@@ -105,7 +109,7 @@ static kern_return_t find_ethernet_interfaces(io_iterator_t *matchingServices,
     }
   }
 
-  return IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDict,
+  return IOServiceGetMatchingServices(kIOMainPortDefault, matchingDict,
                                       matchingServices);
 }
 
